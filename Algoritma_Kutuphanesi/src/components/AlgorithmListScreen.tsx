@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import '../styles/AlgorithmListScreen.css';
+import { FaArrowLeft, FaSearch } from 'react-icons/fa';
 
 // Veri tipleri
 interface Algorithm {
@@ -9,172 +10,184 @@ interface Algorithm {
   description: string;
   complexity: string;
   difficulty: string;
+  category: string;
+  subCategory: string;
 }
 
 interface SubCategories {
   [key: string]: Algorithm[];
 }
 
-interface AllCategories {
-  [key: string]: SubCategories;
-}
+// Sabit algoritma verileri
+const algorithmData: Algorithm[] = [
+  // Veri Yapıları - Diziler
+  {
+    id: '1',
+    title: 'Bubble Sort',
+    description: 'Yan yana bulunan elemanları karşılaştırarak sıralama yapan basit bir algoritmadır.',
+    complexity: 'O(n²)',
+    difficulty: 'Kolay',
+    category: '1',
+    subCategory: 'Diziler'
+  },
+  {
+    id: '2',
+    title: 'Selection Sort',
+    description: 'Her adımda dizideki en küçük elemanı bulup doğru konuma yerleştiren bir sıralama algoritmasıdır.',
+    complexity: 'O(n²)',
+    difficulty: 'Kolay',
+    category: '1',
+    subCategory: 'Diziler'
+  },
+  {
+    id: '3',
+    title: 'Insertion Sort',
+    description: 'Diziyi tek tek eleman ekleyerek sıralayan, küçük veri setleri için etkili bir sıralama algoritmasıdır.',
+    complexity: 'O(n²)',
+    difficulty: 'Kolay',
+    category: '1',
+    subCategory: 'Diziler'
+  },
+  {
+    id: '4',
+    title: 'Merge Sort',
+    description: 'Böl ve yönet stratejisini kullanarak veriyi sıralayan etkili bir algoritmadır.',
+    complexity: 'O(n log n)',
+    difficulty: 'Orta',
+    category: '1',
+    subCategory: 'Diziler'
+  },
+  {
+    id: '5',
+    title: 'Quick Sort',
+    description: 'Böl ve yönet yaklaşımını kullanan hızlı ve verimli bir sıralama algoritmasıdır.',
+    complexity: 'O(n log n)',
+    difficulty: 'Orta',
+    category: '1',
+    subCategory: 'Diziler'
+  },
+  {
+    id: '6',
+    title: 'Binary Search',
+    description: 'Sıralı bir dizide bir elemanın verimli şekilde aranmasını sağlayan algoritmadır.',
+    complexity: 'O(log n)',
+    difficulty: 'Kolay',
+    category: '1',
+    subCategory: 'Diziler'
+  },
+  
+  // Veri Yapıları - Bağlı Listeler
+  {
+    id: '7',
+    title: 'Tek Yönlü Bağlı Liste',
+    description: 'Her düğümün bir sonraki düğüme işaret ettiği bir veri yapısıdır.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '1',
+    subCategory: 'Bağlı Listeler'
+  },
+  {
+    id: '8',
+    title: 'Çift Yönlü Bağlı Liste',
+    description: 'Her düğümün bir önceki ve bir sonraki düğüme işaret ettiği bir veri yapısıdır.',
+    complexity: 'O(n)',
+    difficulty: 'Orta',
+    category: '1',
+    subCategory: 'Bağlı Listeler'
+  },
+  {
+    id: '9',
+    title: 'Dairesel Bağlı Liste',
+    description: 'Son düğümün ilk düğüme işaret ettiği, sürekli bir döngü oluşturan bağlı liste yapısıdır.',
+    complexity: 'O(n)',
+    difficulty: 'Orta',
+    category: '1',
+    subCategory: 'Bağlı Listeler'
+  },
+  
+  // Veri Yapıları - Ağaçlar
+  {
+    id: '10',
+    title: 'İkili Arama Ağacı',
+    description: 'Her düğümün sol alt ağacındaki değerlerin kendisinden küçük, sağ alt ağacındaki değerlerin kendisinden büyük olduğu veri yapısıdır.',
+    complexity: 'O(log n)',
+    difficulty: 'Orta',
+    category: '1',
+    subCategory: 'Ağaçlar'
+  },
+  {
+    id: '11',
+    title: 'AVL Ağacı',
+    description: 'Kendi kendini dengeleyen bir ikili arama ağacı türüdür.',
+    complexity: 'O(log n)',
+    difficulty: 'Zor',
+    category: '1',
+    subCategory: 'Ağaçlar'
+  },
+  {
+    id: '12',
+    title: 'Kırmızı-Siyah Ağaç',
+    description: 'Kendi kendini dengeleyen ikili bir arama ağacı türüdür. Her düğüm kırmızı veya siyah renge sahiptir.',
+    complexity: 'O(log n)',
+    difficulty: 'Zor',
+    category: '1',
+    subCategory: 'Ağaçlar'
+  },
+  
+  // Makine Öğrenmesi - Denetimli Öğrenme
+  {
+    id: '13',
+    title: 'Karar Ağaçları',
+    description: 'Verilerin özelliklerine göre sınıflandırma yapan ağaç yapısında bir modeldir.',
+    complexity: 'O(n log n)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
+  {
+    id: '14',
+    title: 'Destek Vektör Makineleri',
+    description: 'Veri noktalarını ayıran optimum hiper düzlemi bulmaya çalışan bir sınıflandırma algoritmasıdır.',
+    complexity: 'O(n²)',
+    difficulty: 'Zor',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
+  
+  // Makine Öğrenmesi - Denetimsiz Öğrenme
+  {
+    id: '15',
+    title: 'K-Means Kümeleme',
+    description: 'Verileri k sayıda kümeye ayıran bir kümeleme algoritmasıdır.',
+    complexity: 'O(k·n·t)',
+    difficulty: 'Orta',
+    category: '3', 
+    subCategory: 'Denetimsiz Öğrenme'
+  },
+  
+  // Derin Öğrenme
+  {
+    id: '16',
+    title: 'Geri Yayılım Algoritması',
+    description: 'Yapay sinir ağlarının eğitiminde kullanılan gradyan tabanlı bir optimizasyon algoritmasıdır.',
+    complexity: 'O(n²)',
+    difficulty: 'Zor',
+    category: '2',
+    subCategory: 'Sinir Ağları'
+  },
+  {
+    id: '17',
+    title: 'Evrişimli Sinir Ağları',
+    description: 'Görüntü tanıma ve işleme için tasarlanmış derin öğrenme mimarisidir.',
+    complexity: 'O(n⁴)',
+    difficulty: 'Zor',
+    category: '2',
+    subCategory: 'CNN'
+  }
+];
 
-// Mock veri
-const dataStructuresSubCategories: SubCategories = {
-  'Diziler': [
-    {
-      id: '1',
-      title: 'Bubble Sort',
-      complexity: 'O(n²)',
-      difficulty: 'Kolay',
-      description: 'Yan yana bulunan elemanları karşılaştırarak sıralama yapan basit bir algoritmadır.'
-    },
-    {
-      id: '2',
-      title: 'Binary Search',
-      complexity: 'O(log n)',
-      difficulty: 'Kolay',
-      description: 'Sıralı bir dizide bir elemanın verimli şekilde aranmasını sağlayan algoritmadır.'
-    },
-    {
-      id: '3',
-      title: 'Merge Sort',
-      complexity: 'O(n log n)',
-      difficulty: 'Orta',
-      description: 'Böl ve yönet stratejisini kullanarak veriyi sıralayan etkili bir algoritmadır.'
-    },
-    {
-      id: '4',
-      title: 'Quick Sort',
-      complexity: 'O(n log n)',
-      difficulty: 'Orta',
-      description: 'Böl ve yönet yaklaşımını kullanan hızlı ve verimli bir sıralama algoritmasıdır.'
-    }
-  ],
-  'Bağlı Listeler': [
-    {
-      id: '5',
-      title: 'Tek Yönlü Bağlı Liste',
-      complexity: 'O(n)',
-      difficulty: 'Kolay',
-      description: 'Her düğümün bir sonraki düğüme işaret ettiği bir veri yapısıdır.'
-    },
-    {
-      id: '6',
-      title: 'Çift Yönlü Bağlı Liste',
-      complexity: 'O(n)',
-      difficulty: 'Orta',
-      description: 'Her düğümün bir önceki ve bir sonraki düğüme işaret ettiği bir veri yapısıdır.'
-    }
-  ],
-  'Ağaçlar': [
-    {
-      id: '7',
-      title: 'İkili Arama Ağacı',
-      complexity: 'O(log n)',
-      difficulty: 'Orta',
-      description: 'Her düğümün sol alt ağacındaki değerlerin kendisinden küçük, sağ alt ağacındaki değerlerin kendisinden büyük olduğu veri yapısıdır.'
-    },
-    {
-      id: '8',
-      title: 'AVL Ağacı',
-      complexity: 'O(log n)',
-      difficulty: 'Zor',
-      description: 'Kendi kendini dengeleyen bir ikili arama ağacı türüdür.'
-    }
-  ]
-};
-
-const deepLearningSubCategories: SubCategories = {
-  'Sinir Ağları': [
-    {
-      id: '9',
-      title: 'Geri Yayılım Algoritması',
-      complexity: 'O(n²)',
-      difficulty: 'Zor',
-      description: 'Yapay sinir ağlarının eğitiminde kullanılan gradyan tabanlı bir optimizasyon algoritmasıdır.'
-    }
-  ],
-  'CNN': [
-    {
-      id: '10',
-      title: 'Evrişimli Sinir Ağları',
-      complexity: 'O(n⁴)',
-      difficulty: 'Zor',
-      description: 'Görüntü tanıma ve işleme için tasarlanmış derin öğrenme mimarisidir.'
-    }
-  ],
-  'RNN': [
-    {
-      id: '11',
-      title: 'Tekrarlayan Sinir Ağları',
-      complexity: 'O(n²)',
-      difficulty: 'Zor',
-      description: 'Zaman serisi verileri ve sıralı verileri işlemek için tasarlanmış bir sinir ağı türüdür.'
-    }
-  ]
-};
-
-const machineLearningSubCategories: SubCategories = {
-  'Denetimli Öğrenme': [
-    {
-      id: '12',
-      title: 'Karar Ağaçları',
-      complexity: 'O(n log n)',
-      difficulty: 'Orta',
-      description: 'Verilerin özelliklerine göre sınıflandırma yapan ağaç yapısında bir modeldir.'
-    },
-    {
-      id: '13',
-      title: 'Destek Vektör Makineleri',
-      complexity: 'O(n²)',
-      difficulty: 'Zor',
-      description: 'Veri noktalarını ayıran optimum hiper düzlemi bulmaya çalışan bir sınıflandırma algoritmasıdır.'
-    }
-  ],
-  'Denetimsiz Öğrenme': [
-    {
-      id: '14',
-      title: 'K-Means Kümeleme',
-      complexity: 'O(k·n·t)',
-      difficulty: 'Orta',
-      description: 'Verileri k sayıda kümeye ayıran bir kümeleme algoritmasıdır.'
-    },
-    {
-      id: '15',
-      title: 'Hiyerarşik Kümeleme',
-      complexity: 'O(n³)',
-      difficulty: 'Orta',
-      description: 'Veri noktalarını hiyerarşik bir ağaç yapısında kümeleyerek gruplaştıran bir algoritmadır.'
-    }
-  ],
-  'Pekiştirmeli Öğrenme': [
-    {
-      id: '16',
-      title: 'Q-Öğrenme',
-      complexity: 'O(n²)',
-      difficulty: 'Zor',
-      description: 'Ajan, çevre ve ödül sistemi üzerinden en iyi eylem stratejisini öğrenen bir algoritmadır.'
-    }
-  ]
-};
-
-// Tüm kategoriler objesini oluştur
-const allCategories: AllCategories = {
-  '1': dataStructuresSubCategories,
-  '2': deepLearningSubCategories,
-  '3': machineLearningSubCategories,
-  // Diğer kategoriler eklenebilir
-};
-
-const difficultyColors: {[key: string]: string} = {
-  'Kolay': '#27ae60',
-  'Orta': '#f39c12',
-  'Zor': '#e74c3c',
-};
-
-// URL parametrelerini alabilmek için basit bir mock kategori objesi
-const mockCategories = {
+// Kategori bilgileri
+const categories = {
   '1': {
     id: '1',
     title: 'Veri Yapıları',
@@ -198,91 +211,169 @@ const mockCategories = {
     description: 'Regresyon, Sınıflandırma, Kümeleme ve diğer ML algoritmaları',
     color: '#e74c3c',
     subCategories: ['Denetimli Öğrenme', 'Denetimsiz Öğrenme', 'Pekiştirmeli Öğrenme']
-  },
+  }
 };
 
-const AlgorithmListScreen: React.FC = () => {
-  // URL'den kategori id parametresini almak için useParams kullanıyoruz
+const difficultyColors = {
+  'Kolay': '#27ae60',
+  'Orta': '#f39c12',
+  'Zor': '#e74c3c',
+};
+
+const AlgorithmListScreen = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
-  // Demo amacıyla mock kategoriyi kullanıyoruz (gerçek uygulamada props veya global state olabilir)
-  const category = mockCategories[categoryId as keyof typeof mockCategories];
+  const navigate = useNavigate();
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // Alt kategorileri alıyoruz
-  const subCategories = allCategories[categoryId || '1'] || {};
-  const subCategoryNames = Object.keys(subCategories);
+  // Kategoriye ait algoritmaları gruplayarak alt kategorilere ayır
+  const getSubCategoriesWithAlgorithms = () => {
+    // Kategoriye ait tüm algoritmaları filtrele
+    const categoryAlgorithms = algorithmData.filter(algo => algo.category === categoryId);
+    
+    // Alt kategorilere göre grupla
+    const grouped: SubCategories = {};
+    
+    if (category?.subCategories) {
+      // Önce tüm alt kategorileri boş dizilerle başlat
+      category.subCategories.forEach(subCat => {
+        grouped[subCat] = [];
+      });
+      
+      // Algoritmaları uygun alt kategorilere yerleştir
+      categoryAlgorithms.forEach(algo => {
+        if (grouped[algo.subCategory]) {
+          grouped[algo.subCategory].push(algo);
+        }
+      });
+    }
+    
+    return grouped;
+  };
   
-  const [selectedSubCategory, setSelectedSubCategory] = useState(subCategoryNames[0] || '');
-  const algorithms = subCategories[selectedSubCategory] || [];
+  const category = categoryId ? categories[categoryId as keyof typeof categories] : null;
+  const subCategories = getSubCategoriesWithAlgorithms();
   
-  // Sayfa yüklendiğinde sayfanın en üstüne scroll yap
+  // Sayfa yüklendiğinde varsayılan alt kategoriyi seç
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [categoryId, selectedSubCategory]);
+    if (category?.subCategories && category.subCategories.length > 0) {
+      setSelectedSubCategory(category.subCategories[0]);
+    } else {
+      setSelectedSubCategory(null);
+    }
+  }, [categoryId]);
+  
+  // Alt kategori seçimi değiştiğinde çalışır
+  const handleSubCategoryClick = (subCategory: string) => {
+    setSelectedSubCategory(subCategory);
+  };
+  
+  // Arama input değiştiğinde çalışır
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+  
+  // Görüntülenecek algoritmaları filtrele
+  const filteredAlgorithms = () => {
+    if (!selectedSubCategory) return [];
+    
+    const allAlgorithms = subCategories[selectedSubCategory] || [];
+    
+    if (!searchQuery.trim()) return allAlgorithms;
+    
+    const lowerSearchQuery = searchQuery.toLowerCase();
+    return allAlgorithms.filter(algorithm => 
+      algorithm.title.toLowerCase().includes(lowerSearchQuery) || 
+      algorithm.description.toLowerCase().includes(lowerSearchQuery)
+    );
+  };
+  
+  // Kategori bulunamadıysa göster
+  if (!category) {
+    return (
+      <div className="algorithm-list-container">
+        <div className="error-container">
+          <h2>Kategori Bulunamadı</h2>
+          <p>Belirtilen kategori bulunamadı. Lütfen geçerli bir kategori seçin.</p>
+          <button 
+            className="action-button"
+            onClick={() => navigate('/')}
+          >
+            Ana Sayfaya Dön
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className="algorithm-list-container">
-      <div className="algorithm-list-content">
-        <div className="algorithm-list-header">
-          <Link to="/" className="back-button">
-            ←
-          </Link>
-          <h1 className="header-title" data-icon={category?.icon || ''}>
-            {category?.title || 'Algoritma Listesi'}
-          </h1>
-          <div className="empty-space"></div>
+    <div className="algorithm-list-page">
+      <div className="header-container">
+        <Link to="/" className="back-button">
+          <FaArrowLeft />
+        </Link>
+        <h1 className="category-title">
+          <span className="category-icon">{category.icon}</span>
+          {category.title}
+        </h1>
+        <div className="search-container">
+          <input
+            type="text"
+            placeholder="Algoritma ara..."
+            className="search-input"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          <FaSearch className="search-icon" />
         </div>
+      </div>
 
-        {/* Alt Kategori Seçici */}
-        <div className="sub-category-container">
-          <div className="sub-category-scroll">
-            {subCategoryNames.map((name) => (
-              <button
-                key={name}
-                className={`sub-category-button ${selectedSubCategory === name ? 'active' : ''}`}
-                onClick={() => setSelectedSubCategory(name)}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="subcategories-container">
+        {category.subCategories.map((subCategory) => (
+          <button
+            key={subCategory}
+            className={`subcategory-button ${selectedSubCategory === subCategory ? "active" : ""}`}
+            onClick={() => handleSubCategoryClick(subCategory)}
+          >
+            {subCategory}
+          </button>
+        ))}
+      </div>
 
-        {/* Algoritma Listesi */}
-        <div className="algorithms-container">
-          {algorithms.length > 0 ? (
-            algorithms.map((item) => (
-              <Link 
-                to={`/algorithm/${item.id}`} 
-                key={item.id}
-                style={{ textDecoration: 'none' }}
-              >
-                <div className="algorithm-item">
-                  <div className="algorithm-header">
-                    <h3 className="algorithm-title">{item.title}</h3>
-                    <div
-                      className="difficulty-badge"
-                      style={{ backgroundColor: difficultyColors[item.difficulty] }}
-                    >
-                      <span className="difficulty-text">{item.difficulty}</span>
-                    </div>
-                  </div>
-                  <p className="algorithm-description">{item.description}</p>
-                  <div className="algorithm-footer">
-                    <span className="complexity-label">Karmaşıklık:</span>
-                    <span className="complexity-value">{item.complexity}</span>
-                  </div>
+      <div className="algorithms-container">
+        {filteredAlgorithms().length > 0 ? (
+          filteredAlgorithms().map((algorithm) => (
+            <Link 
+              to={`/algorithm/${algorithm.title}`} 
+              key={algorithm.id} 
+              className="algorithm-card"
+            >
+              <div className="algorithm-title-row">
+                <h3 className="algorithm-title">{algorithm.title}</h3>
+                <div 
+                  className="difficulty-badge"
+                  style={{ backgroundColor: difficultyColors[algorithm.difficulty as keyof typeof difficultyColors] }}
+                >
+                  {algorithm.difficulty}
                 </div>
-              </Link>
-            ))
-          ) : (
-            <div className="no-results">
-              Bu kategoride algoritma bulunamadı.
-            </div>
-          )}
-        </div>
-        
-        {/* Sayfa sonu boşluğu */}
-        <div className="page-end-spacer"></div>
+              </div>
+              <p className="algorithm-description">{algorithm.description}</p>
+              <div className="complexity-badge">
+                <span className="complexity-label">Karmaşıklık:</span>
+                <span className="complexity-value">{algorithm.complexity}</span>
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="no-results">
+            <p>
+              {searchQuery.trim() 
+                ? 'Aramanıza uygun algoritma bulunamadı.'
+                : 'Yakında Gelecek'
+              }
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

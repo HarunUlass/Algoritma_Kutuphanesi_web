@@ -25,6 +25,7 @@ const LoginScreen: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -83,43 +84,55 @@ const LoginScreen: React.FC = () => {
     }
     
     try {
+      console.log('Giriş yapılıyor:', loginEmail);
+      
       // Test kullanıcısı kontrolü
       if (loginEmail === 'test@example.com' && loginPassword === 'password123') {
         console.log('Test kullanıcısı girişi yapılıyor...');
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('username', 'Test Kullanıcı');
         localStorage.setItem('userId', '65f5a8c0b89f8a5e92a8ed3a');
-        navigate('/');
+        navigate('/home');
         return;
       }
       
-      // Normal kullanıcı girişi
+      // Backend API ile kullanıcı girişi
       const result = await loginUser(loginEmail, loginPassword);
       
       if (!result) {
-        setLoginError('Geçersiz email veya şifre.');
+        setLoginError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
         return;
       }
       
       // Başarılı giriş
+      console.log('Giriş başarılı:', result);
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('username', result.user.ad || loginEmail.split('@')[0]);
+      localStorage.setItem('username', result.user.username || loginEmail.split('@')[0]);
       localStorage.setItem('userId', result.user._id?.toString() || '');
-      navigate('/');
+      navigate('/home');
     } catch (error: any) {
       console.error('Giriş sırasında hata:', error);
       
-      // Test kullanıcı kontrolü - hata durumunda
-      if (loginEmail === 'test@example.com' && loginPassword === 'password123') {
-        console.log('MongoDB bağlantısı olmadan test kullanıcısı ile giriş');
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', 'Test Kullanıcı');
-        localStorage.setItem('userId', '65f5a8c0b89f8a5e92a8ed3a');
-        navigate('/');
-        return;
+      // Hataya göre mesaj göster - server.js'den gelen hatalara göre uyarlandı
+      if (error.message.includes('Kullanıcı bulunamadı') || error.message.includes('404')) {
+        setLoginError('Bu email ile kayıtlı kullanıcı bulunamadı.');
+      } else if (error.message.includes('Hatalı şifre') || error.message.includes('401')) {
+        setLoginError('Hatalı şifre girdiniz.');
+      } else if (error.message.includes('Failed to fetch')) {
+        setLoginError('Sunucuya bağlanılamadı. Lütfen daha sonra tekrar deneyin veya test hesabını kullanın.');
+        
+        // Test kullanıcı kontrolü - API bağlantı hatası durumunda
+        if (loginEmail === 'test@example.com' && loginPassword === 'password123') {
+          console.log('Sunucu bağlantısı olmadan test kullanıcısı ile giriş');
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('username', 'Test Kullanıcı');
+          localStorage.setItem('userId', '65f5a8c0b89f8a5e92a8ed3a');
+          navigate('/home');
+          return;
+        }
+      } else {
+        setLoginError(error.message || 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
       }
-      
-      setLoginError(error.message || 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
     }
   };
   
@@ -130,7 +143,7 @@ const LoginScreen: React.FC = () => {
     setSuccessMessage('');
     
     // Basic validation
-    if (!firstName || !lastName || !registerEmail || !registerPassword || !confirmPassword) {
+    if (!registerUsername || !registerEmail || !registerPassword || !confirmPassword) {
       setRegisterError('Lütfen tüm alanları doldurunuz.');
       return;
     }
@@ -151,6 +164,8 @@ const LoginScreen: React.FC = () => {
     }
     
     try {
+      console.log('Kayıt yapılıyor:', registerEmail);
+      
       // Email'in kullanımda olup olmadığını kontrol et
       const emailExists = await checkEmailExists(registerEmail);
       if (emailExists) {
@@ -158,11 +173,10 @@ const LoginScreen: React.FC = () => {
         return;
       }
       
-      // MongoDB'ye kullanıcı kaydı
+      // Backend API ile kullanıcı kaydı - server.js'in beklediği formatta (email, username, password)
       const result = await registerUser({
-        ad: firstName,
-        soyad: lastName,
         email: registerEmail,
+        username: registerUsername,
         password: registerPassword
       });
       
@@ -171,26 +185,29 @@ const LoginScreen: React.FC = () => {
         return;
       }
       
-      if (typeof result === 'object' && 'error' in result && typeof result.error === 'string') {
-        setRegisterError(result.error);
-        return;
-      }
-      
       // Başarılı kayıt
+      console.log('Kayıt başarılı:', result);
       setSuccessMessage('Kayıt başarılı! Giriş yapabilirsiniz.');
       setTimeout(() => {
         setActiveTab('login');
         setLoginEmail(registerEmail);
         setRegisterEmail('');
+        setRegisterUsername('');
         setRegisterPassword('');
         setConfirmPassword('');
-        setFirstName('');
-        setLastName('');
         setSuccessMessage('');
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Kayıt sırasında hata:', error);
-      setRegisterError('Kayıt yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
+      
+      // Hataya göre mesaj göster - server.js'den gelen hatalara göre uyarlandı
+      if (error.message.includes('email veya kullanıcı adı') || error.message.includes('400')) {
+        setRegisterError('Bu email adresi veya kullanıcı adı zaten kullanılıyor.');
+      } else if (error.message.includes('Failed to fetch')) {
+        setRegisterError('Sunucuya bağlanılamadı. Lütfen daha sonra tekrar deneyin.');
+      } else {
+        setRegisterError(error.message || 'Kayıt yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
+      }
     }
   };
   
@@ -287,30 +304,6 @@ const LoginScreen: React.FC = () => {
           <form onSubmit={handleRegister}>
             <h2 className="login-title">Yeni Hesap Oluştur</h2>
             
-            <div className="name-row">
-              <div className="input-group">
-                <label className="input-label">Ad</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Adınız"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                />
-              </div>
-              
-              <div className="input-group">
-                <label className="input-label">Soyad</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Soyadınız"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
-              </div>
-            </div>
-            
             <div className="input-group">
               <label className="input-label">E-posta Adresi</label>
               <input
@@ -319,6 +312,17 @@ const LoginScreen: React.FC = () => {
                 placeholder="ornek@mail.com"
                 value={registerEmail}
                 onChange={(e) => setRegisterEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="input-group">
+              <label className="input-label">Kullanıcı Adı</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="kullaniciadi"
+                value={registerUsername}
+                onChange={(e) => setRegisterUsername(e.target.value)}
               />
             </div>
             
