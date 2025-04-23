@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import '../styles/AlgorithmListScreen.css';
-import { FaArrowLeft, FaSearch } from 'react-icons/fa';
+import { FaArrowLeft, FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
 
 // Veri tipleri
 interface Algorithm {
@@ -225,6 +225,8 @@ const AlgorithmListScreen = () => {
   const navigate = useNavigate();
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [difficultyFilter, setDifficultyFilter] = useState<string[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   
   // Kategoriye ait algoritmaları gruplayarak alt kategorilere ayır
   const getSubCategoriesWithAlgorithms = () => {
@@ -261,6 +263,9 @@ const AlgorithmListScreen = () => {
     } else {
       setSelectedSubCategory(null);
     }
+    // Filtreleri sıfırla
+    setDifficultyFilter([]);
+    setSearchQuery('');
   }, [categoryId]);
   
   // Alt kategori seçimi değiştiğinde çalışır
@@ -272,19 +277,68 @@ const AlgorithmListScreen = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
+
+  // Zorluk filtresini değiştir
+  const handleDifficultyFilterChange = (difficulty: string) => {
+    setDifficultyFilter(prev => {
+      if (prev.includes(difficulty)) {
+        return prev.filter(d => d !== difficulty);
+      } else {
+        return [...prev, difficulty];
+      }
+    });
+  };
+
+  // Filtreleri temizle
+  const clearFilters = () => {
+    setDifficultyFilter([]);
+    setSearchQuery('');
+  };
   
   // Görüntülenecek algoritmaları filtrele
   const filteredAlgorithms = () => {
     if (!selectedSubCategory) return [];
     
-    const allAlgorithms = subCategories[selectedSubCategory] || [];
+    let allAlgorithms = subCategories[selectedSubCategory] || [];
     
-    if (!searchQuery.trim()) return allAlgorithms;
+    // Zorluk filtresini uygula
+    if (difficultyFilter.length > 0) {
+      allAlgorithms = allAlgorithms.filter(algorithm => 
+        difficultyFilter.includes(algorithm.difficulty)
+      );
+    }
     
-    const lowerSearchQuery = searchQuery.toLowerCase();
-    return allAlgorithms.filter(algorithm => 
-      algorithm.title.toLowerCase().includes(lowerSearchQuery) || 
-      algorithm.description.toLowerCase().includes(lowerSearchQuery)
+    // Arama sorgusunu uygula
+    if (searchQuery.trim()) {
+      const lowerSearchQuery = searchQuery.toLowerCase();
+      return allAlgorithms.filter(algorithm => 
+        algorithm.title.toLowerCase().includes(lowerSearchQuery) || 
+        algorithm.description.toLowerCase().includes(lowerSearchQuery) ||
+        algorithm.complexity.toLowerCase().includes(lowerSearchQuery)
+      );
+    }
+    
+    return allAlgorithms;
+  };
+
+  // Metni vurgula (arama terimine göre)
+  const highlightText = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    
+    if (!lowerText.includes(lowerQuery)) return text;
+    
+    const startIndex = lowerText.indexOf(lowerQuery);
+    const endIndex = startIndex + lowerQuery.length;
+    
+    return (
+      <>
+        {text.substring(0, startIndex)}
+        <span className="highlight">{text.substring(startIndex, endIndex)}</span>
+        {text.substring(endIndex)}
+      </>
     );
   };
   
@@ -316,17 +370,66 @@ const AlgorithmListScreen = () => {
           <span className="category-icon">{category.icon}</span>
           {category.title}
         </h1>
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Algoritma ara..."
-            className="search-input"
-            value={searchQuery}
-            onChange={handleSearchChange}
-          />
-          <FaSearch className="search-icon" />
+        <div className="actions-container">
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Algoritma ara..."
+              className="search-input"
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+            {searchQuery ? (
+              <FaTimes 
+                className="search-clear-icon" 
+                onClick={() => setSearchQuery('')}
+              />
+            ) : (
+              <FaSearch className="search-icon" />
+            )}
+          </div>
+          <button 
+            className={`filter-button ${isFilterOpen ? 'active' : ''}`}
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            aria-label="Filtrele"
+          >
+            <FaFilter />
+          </button>
         </div>
       </div>
+
+      {isFilterOpen && (
+        <div className="filter-panel">
+          <div className="filter-section">
+            <h3>Zorluk Derecesi</h3>
+            <div className="difficulty-filters">
+              {Object.keys(difficultyColors).map(difficulty => (
+                <label key={difficulty} className="filter-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={difficultyFilter.includes(difficulty)}
+                    onChange={() => handleDifficultyFilterChange(difficulty)}
+                  />
+                  <span 
+                    className="difficulty-label"
+                    style={{ backgroundColor: difficultyColors[difficulty as keyof typeof difficultyColors] }}
+                  >
+                    {difficulty}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="filter-actions">
+            <button className="clear-filters-button" onClick={clearFilters}>
+              Filtreleri Temizle
+            </button>
+            <button className="close-filters-button" onClick={() => setIsFilterOpen(false)}>
+              Kapat
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="subcategories-container">
         {category.subCategories.map((subCategory) => (
@@ -349,7 +452,9 @@ const AlgorithmListScreen = () => {
               className="algorithm-card"
             >
               <div className="algorithm-title-row">
-                <h3 className="algorithm-title">{algorithm.title}</h3>
+                <h3 className="algorithm-title">
+                  {searchQuery ? highlightText(algorithm.title, searchQuery) : algorithm.title}
+                </h3>
                 <div 
                   className="difficulty-badge"
                   style={{ backgroundColor: difficultyColors[algorithm.difficulty as keyof typeof difficultyColors] }}
@@ -357,22 +462,37 @@ const AlgorithmListScreen = () => {
                   {algorithm.difficulty}
                 </div>
               </div>
-              <p className="algorithm-description">{algorithm.description}</p>
+              <p className="algorithm-description">
+                {searchQuery ? highlightText(algorithm.description, searchQuery) : algorithm.description}
+              </p>
               <div className="complexity-badge">
                 <span className="complexity-label">Karmaşıklık:</span>
-                <span className="complexity-value">{algorithm.complexity}</span>
+                <span className="complexity-value">
+                  {searchQuery ? highlightText(algorithm.complexity, searchQuery) : algorithm.complexity}
+                </span>
               </div>
             </Link>
           ))
         ) : (
           <div className="no-results">
             <p>
-              {searchQuery.trim() 
-                ? 'Aramanıza uygun algoritma bulunamadı.'
+              {(searchQuery.trim() || difficultyFilter.length > 0)
+                ? 'Arama kriterlerinize uygun algoritma bulunamadı.'
                 : 'Yakında Gelecek'
               }
             </p>
+            {(searchQuery.trim() || difficultyFilter.length > 0) && (
+              <button className="clear-filters-button" onClick={clearFilters}>
+                Filtreleri Temizle
+              </button>
+            )}
           </div>
+        )}
+      </div>
+      
+      <div className="results-summary">
+        {filteredAlgorithms().length > 0 && (
+          <p>{filteredAlgorithms().length} algoritma bulundu</p>
         )}
       </div>
     </div>

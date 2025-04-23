@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
   console.log('Environment variables loaded:', Object.keys(env).filter(key => key.startsWith('VITE_')))
   
   return {
-    plugins: [react()],
+  plugins: [react()],
     resolve: {
       alias: {
         '@': resolve(__dirname, './src')
