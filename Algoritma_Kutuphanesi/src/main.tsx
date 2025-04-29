@@ -7,6 +7,7 @@ import LoginScreen from './components/LoginScreen';
 import AlgorithmListScreen from './components/AlgorithmListScreen';
 import AlgorithmDetailScreen from './components/AlgorithmDetailScreen';
 import ProfileScreen from './components/ProfileScreen';
+import QuizScreen from './components/QuizScreen';
 import './index.css';
 
 // Console log ile uygulamanın başladığını gösterelim
@@ -38,6 +39,10 @@ const router = createHashRouter([
   {
     path: '/algorithm/:algorithmId',
     element: <AlgorithmDetailScreen />,
+  },
+  {
+    path: '/quiz/:quizId',
+    element: <QuizScreen />,
   },
   {
     path: '/profile',

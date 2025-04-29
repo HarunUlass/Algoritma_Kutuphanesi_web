@@ -48,7 +48,7 @@ function App() {
         <Route path="/profile" element={<ProfileScreen />} />
         <Route path="*" element={<div>Sayfa bulunamadı</div>} />
       </Routes>
-      </div>
+    </div>
   );
 }
 

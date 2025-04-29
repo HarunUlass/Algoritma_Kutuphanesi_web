@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/NewHome.css';
 import logoImage from '../assets/logo.png';
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa';
+import { getAllQuizzes, Quiz } from '../services/quizService';
 
 // Kategori türünü tanımlayalım
 interface Category {
@@ -492,9 +493,28 @@ const NewHome: React.FC = () => {
             </div>
           </section>
         )}
+        const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+        const [quizLoading, setQuizLoading] = useState<boolean>(true);
+        const [quizError, setQuizError] = useState<string | null>(null);
+        
+        useEffect(() => {
+          const fetchQuizzes = async () => {
+            setQuizLoading(true);
+            setQuizError(null);
+            try {
+              const data = await getAllQuizzes();
+              setQuizzes(data);
+            } catch (err) {
+              setQuizError('Quizler yüklenirken hata oluştu.');
+            } finally {
+              setQuizLoading(false);
+            }
+          };
+          fetchQuizzes();
+        }, []);
       </div>
     </div>
   );
 };
 
-export default NewHome; 
+export default NewHome;

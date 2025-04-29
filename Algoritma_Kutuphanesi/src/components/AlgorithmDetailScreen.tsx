@@ -451,6 +451,12 @@ function comingSoon() {
                 <button className="action-button">
                   Çalıştır
                 </button>
+                <button 
+                  className="action-button quiz-button"
+                  onClick={() => navigate(`/quiz/${algorithm._id}`)}
+                >
+                  Quiz'i Başlat
+                </button>
               </div>
             </div>
           )}
@@ -480,4 +486,4 @@ function comingSoon() {
   );
 };
 
-export default AlgorithmDetailScreen; 
+export default AlgorithmDetailScreen;

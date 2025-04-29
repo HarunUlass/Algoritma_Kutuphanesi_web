@@ -49,6 +49,13 @@ export const api = {
   algorithms: {
     getAll: () => fetchApi('/algorithms', 'GET'),
     getByTitle: (title: string) => fetchApi(`/algorithms/${title}`, 'GET')
+  },
+  quiz: {
+    getAll: () => fetchApi('/quiz', 'GET'),
+    getByAlgorithmId: (algorithmId: string) => fetchApi(`/quiz/algorithm/${algorithmId}`, 'GET'),
+    getById: (quizId: string) => fetchApi(`/quiz/${quizId}`, 'GET'),
+    submitAttempt: (attemptData: any) => fetchApi('/quiz/attempt', 'POST', attemptData),
+    getUserAttempts: (userId: string) => fetchApi(`/quiz/attempts/${userId}`, 'GET')
   }
 };
 
@@ -78,4 +85,4 @@ export async function healthCheck() {
       timestamp: new Date().toISOString()
     };
   }
-} 
+}
