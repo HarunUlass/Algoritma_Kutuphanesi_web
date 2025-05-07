@@ -89,6 +89,9 @@ const AlgorithmDetailScreen: React.FC<AlgorithmDetailScreenProps> = () => {
           if (data.exampleCode && data.exampleCode.language) {
             setSelectedLanguage(data.exampleCode.language);
           }
+          
+          // Algoritma görüntüleme olayını tetikle
+          recordAlgorithmView(data);
         } else {
           setError('Algoritma bulunamadı. Lütfen geçerli bir algoritma seçin.');
         }
@@ -107,6 +110,43 @@ const AlgorithmDetailScreen: React.FC<AlgorithmDetailScreenProps> = () => {
     // Sayfa yüklendiğinde sayfanın en üstüne scroll yap
     window.scrollTo(0, 0);
   }, [algorithmId]);
+  
+  // Algoritma görüntüleme kaydı oluştur
+  const recordAlgorithmView = (algorithm: Algorithm) => {
+    // Algoritma görüntüleme bilgileri
+    const viewData = {
+      id: algorithm._id,
+      title: algorithm.title,
+      description: algorithm.description.substring(0, 100) + (algorithm.description.length > 100 ? '...' : ''),
+      complexity: algorithm.complexity.time.worst,
+      difficulty: getDifficulty(algorithm),
+      url: `/algorithms/detail/${algorithmId}`
+    };
+    
+    // Algoritma görüntüleme olayını özel event olarak tetikle
+    const event = new CustomEvent('algorithmViewed', { detail: viewData });
+    window.dispatchEvent(event);
+    
+    // Ayrıca API'ye bildir (back-end entegrasyonu için)
+    // api.userProgress.recordView(algorithm._id);
+    
+    console.log(`"${algorithm.title}" algoritması görüntülendi`);
+  };
+  
+  // Algoritma zorluğunu belirle
+  const getDifficulty = (algorithm: Algorithm): string => {
+    // Burada algoritmanın zorluğunu belirlemek için bir mantık uygulayabiliriz
+    // Örneğin, algoritmanın karmaşıklığına bakarak zorluk seviyesini belirleyebiliriz
+    const worstComplexity = algorithm.complexity.time.worst;
+    
+    if (worstComplexity.includes('1)') || worstComplexity.includes('log n)')) {
+      return 'Kolay';
+    } else if (worstComplexity.includes('n log n)') || worstComplexity.includes('n)')) {
+      return 'Orta';
+    } else {
+      return 'Zor';
+    }
+  };
   
   // Kopyalama durumunu sıfırla
   useEffect(() => {

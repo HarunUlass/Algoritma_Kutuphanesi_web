@@ -4,6 +4,7 @@ import '../styles/NewHome.css';
 import logoImage from '../assets/logo.png';
 import { FaSearch, FaTimes, FaFilter } from 'react-icons/fa';
 import { getAllQuizzes, Quiz } from '../services/quizService';
+import ChatBotTrigger from './ChatBotTrigger';
 
 // Kategori türünü tanımlayalım
 interface Category {
@@ -193,6 +194,28 @@ const NewHome: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [difficultyFilter, setDifficultyFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [quizLoading, setQuizLoading] = useState<boolean>(true);
+  const [quizError, setQuizError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      setQuizLoading(true);
+      setQuizError(null);
+      try {
+        console.log('Quiz verilerini getirme isteği gönderiliyor...');
+        const data = await getAllQuizzes();
+        console.log('Alınan quiz verileri:', data);
+        setQuizzes(data);
+      } catch (err: any) {
+        console.error('Quiz verileri çekilirken hata:', err);
+        setQuizError('Quizler yüklenirken hata oluştu: ' + (err.message || String(err)));
+      } finally {
+        setQuizLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, []);
   
   // Arama panelini aç/kapat
   const toggleSearch = () => {
@@ -295,225 +318,268 @@ const NewHome: React.FC = () => {
   };
 
   return (
-    <div className="home-safe-area">
-      <div className="home-content">
-        <header className="home-header">
-          <div className="home-logo">
-            <img src={logoImage} alt="Logo" className="logo-fallback" />
-            <div className="home-logo-text">Algoritma Kütüphanesi</div>
-          </div>
-          <div className="header-right">
-            <button className="search-button" onClick={toggleSearch}>
-              {isSearchOpen ? <FaTimes /> : <FaSearch />}
-            </button>
-            <Link to={isLoggedIn ? "/profile" : "/login"} className="profile-button">
-              {isLoggedIn ? userInitial : '🔑'}
-            </Link>
-          </div>
-        </header>
-        
-        {isSearchOpen && (
-          <div className="search-panel">
-            <div className="search-header">
-              <div className="search-input-container">
-                <FaSearch className="search-input-icon" />
-                <input
-                  type="text"
-                  placeholder="Algoritma ara..."
-                  className="search-input-field"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
-                />
-                {searchQuery && (
-                  <FaTimes 
-                    className="search-clear-icon" 
-                    onClick={() => setSearchQuery('')}
+    <React.Fragment>
+      <div className="home-safe-area">
+        <div className="home-content">
+          <header className="home-header">
+            <div className="home-logo">
+              <img src={logoImage} alt="Logo" className="logo-fallback" />
+              <div className="home-logo-text">Algoritma Kütüphanesi</div>
+            </div>
+            <div className="header-right">
+              <button className="search-button" onClick={toggleSearch}>
+                {isSearchOpen ? <FaTimes /> : <FaSearch />}
+              </button>
+              <Link to={isLoggedIn ? "/profile" : "/login"} className="profile-button">
+                {isLoggedIn ? userInitial : '🔑'}
+              </Link>
+            </div>
+          </header>
+          
+          {isSearchOpen && (
+            <div className="search-panel">
+              <div className="search-header">
+                <div className="search-input-container">
+                  <FaSearch className="search-input-icon" />
+                  <input
+                    type="text"
+                    placeholder="Algoritma ara..."
+                    className="search-input-field"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
                   />
-                )}
-              </div>
-            </div>
-            
-            <div className="filter-options">
-              <div className="filter-section">
-                <h3>Zorluk Derecesi</h3>
-                <div className="difficulty-filters">
-                  {Object.keys(difficultyColors).map(difficulty => (
-                    <label key={difficulty} className="filter-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={difficultyFilter.includes(difficulty)}
-                        onChange={() => handleDifficultyFilterChange(difficulty)}
-                      />
-                      <span 
-                        className="difficulty-label"
-                        style={{ backgroundColor: difficultyColors[difficulty as keyof typeof difficultyColors] }}
-                      >
-                        {difficulty}
-                      </span>
-                    </label>
-                  ))}
+                  {searchQuery && (
+                    <FaTimes 
+                      className="search-clear-icon" 
+                      onClick={() => setSearchQuery('')}
+                    />
+                  )}
                 </div>
               </div>
               
-              <div className="filter-section">
-                <h3>Kategoriler</h3>
-                <div className="category-filters">
-                  {categories.map(category => (
-                    <label key={category.id} className="filter-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={categoryFilter.includes(category.id)}
-                        onChange={() => handleCategoryFilterChange(category.id)}
-                      />
-                      <span className="category-filter-label" style={{ color: category.color }}>
-                        {category.icon} {category.title}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              
-              {(difficultyFilter.length > 0 || categoryFilter.length > 0 || searchQuery) && (
-                <button className="clear-filters-button" onClick={clearFilters}>
-                  Filtreleri Temizle
-                </button>
-              )}
-            </div>
-            
-            <div className="search-results">
-              <div className="results-header">
-                {searchResults.length > 0 ? (
-                  <span>{searchResults.length} algoritma bulundu</span>
-                ) : (
-                  <span>Sonuç bulunamadı</span>
-                )}
-              </div>
-              
-              <div className="results-list">
-                {searchResults.map(algorithm => (
-                  <div 
-                    className="search-result-item" 
-                    key={algorithm.id}
-                    onClick={() => goToAlgorithmDetail(algorithm.title)}
-                  >
-                    <div className="result-item-icon">
-                      {algorithm.icon}
-                    </div>
-                    <div className="result-item-info">
-                      <div className="result-item-title">
-                        {searchQuery ? highlightText(algorithm.title, searchQuery) : algorithm.title}
-                        {algorithm.difficulty && (
-                          <span 
-                            className="result-difficulty"
-                            style={{ backgroundColor: difficultyColors[algorithm.difficulty as keyof typeof difficultyColors] }}
-                          >
-                            {algorithm.difficulty}
-                          </span>
-                        )}
-                      </div>
-                      <div className="result-item-description">
-                        {searchQuery ? highlightText(algorithm.description, searchQuery) : algorithm.description}
-                      </div>
-                      <div className="result-item-complexity">
-                        <span>Karmaşıklık:</span> 
-                        {searchQuery ? highlightText(algorithm.complexity, searchQuery) : algorithm.complexity}
-                      </div>
-                    </div>
+              <div className="filter-options">
+                <div className="filter-section">
+                  <h3>Zorluk Derecesi</h3>
+                  <div className="difficulty-filters">
+                    {Object.keys(difficultyColors).map(difficulty => (
+                      <label key={difficulty} className="filter-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={difficultyFilter.includes(difficulty)}
+                          onChange={() => handleDifficultyFilterChange(difficulty)}
+                        />
+                        <span 
+                          className="difficulty-label"
+                          style={{ backgroundColor: difficultyColors[difficulty as keyof typeof difficultyColors] }}
+                        >
+                          {difficulty}
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                ))}
+                </div>
                 
-                {searchResults.length === 0 && (
-                  <div className="no-results-message">
-                    <p>Arama kriterlerinize uygun algoritma bulunamadı.</p>
-                    <p>Farklı bir arama terimi deneyin veya filtreleri değiştirin.</p>
+                <div className="filter-section">
+                  <h3>Kategoriler</h3>
+                  <div className="category-filters">
+                    {categories.map(category => (
+                      <label key={category.id} className="filter-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={categoryFilter.includes(category.id)}
+                          onChange={() => handleCategoryFilterChange(category.id)}
+                        />
+                        <span className="category-filter-label" style={{ color: category.color }}>
+                          {category.icon} {category.title}
+                        </span>
+                      </label>
+                    ))}
                   </div>
+                </div>
+                
+                {(difficultyFilter.length > 0 || categoryFilter.length > 0 || searchQuery) && (
+                  <button className="clear-filters-button" onClick={clearFilters}>
+                    Filtreleri Temizle
+                  </button>
                 )}
               </div>
+              
+              <div className="search-results">
+                <div className="results-header">
+                  {searchResults.length > 0 ? (
+                    <span>{searchResults.length} algoritma bulundu</span>
+                  ) : (
+                    <span>Sonuç bulunamadı</span>
+                  )}
+                </div>
+                
+                <div className="results-list">
+                  {searchResults.map(algorithm => (
+                    <div 
+                      className="search-result-item" 
+                      key={algorithm.id}
+                      onClick={() => goToAlgorithmDetail(algorithm.title)}
+                    >
+                      <div className="result-item-icon">
+                        {algorithm.icon}
+                      </div>
+                      <div className="result-item-info">
+                        <div className="result-item-title">
+                          {searchQuery ? highlightText(algorithm.title, searchQuery) : algorithm.title}
+                          {algorithm.difficulty && (
+                            <span 
+                              className="result-difficulty"
+                              style={{ backgroundColor: difficultyColors[algorithm.difficulty as keyof typeof difficultyColors] }}
+                            >
+                              {algorithm.difficulty}
+                            </span>
+                          )}
+                        </div>
+                        <div className="result-item-description">
+                          {searchQuery ? highlightText(algorithm.description, searchQuery) : algorithm.description}
+                        </div>
+                        <div className="result-item-complexity">
+                          <span>Karmaşıklık:</span> 
+                          {searchQuery ? highlightText(algorithm.complexity, searchQuery) : algorithm.complexity}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {searchResults.length === 0 && (
+                    <div className="no-results-message">
+                      <p>Arama kriterlerinize uygun algoritma bulunamadı.</p>
+                      <p>Farklı bir arama terimi deneyin veya filtreleri değiştirin.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
-        
-        <section className="main-section">
-          <div className="section-title">
-            <span className="section-title-accent"></span>
-            Kategoriler
-          </div>
-          <div className="categories-grid">
-            {categories.map((item) => (
-              <Link 
-                to={`/algorithms/${item.id}`} 
-                className="category-card" 
-                key={item.id}
-              >
-                <div className="category-image">{item.icon}</div>
-                <div className="category-info">
-                  <div className="category-name">{item.title}</div>
-                  <div className="category-count">{item.subCategories.length} algoritma</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-        
-        <section className="main-section">
-          <div className="section-title">
-            <span className="section-title-accent"></span>
-            Popüler Algoritmalar
-          </div>
-          <div className="featured-algorithms">
-            {featuredCards.map(card => (
-              <Link 
-                to={card.link} 
-                className="algorithm-card" 
-                key={card.id}
-              >
-                <div className="algorithm-info">
-                  <div className="algorithm-title">{card.title}</div>
-                  <div className="algorithm-description">{card.description}</div>
-                  <div className="algorithm-complexity">Karmaşıklık: {card.complexity}</div>
-                </div>
-                <div className="algorithm-icon">{card.icon}</div>
-              </Link>
-            ))}
-          </div>
-        </section>
-        
-        {!isLoggedIn && (
-          <section className="main-section login-prompt-section">
+          )}
+          
+          <section className="main-section">
             <div className="section-title">
               <span className="section-title-accent"></span>
-              Hesap Oluşturun
+              Kategoriler
             </div>
-            <div className="login-prompt">
-              <p>Algoritma Kütüphanesi'nde hesap oluşturarak favori algoritmaları kaydedin ve ziyaret geçmişinizi takip edin.</p>
-              <Link to="/login" className="login-button">
-                Giriş Yap / Kayıt Ol
-              </Link>
+            <div className="categories-grid">
+              {categories.map((item) => (
+                <Link 
+                  to={`/algorithms/${item.id}`} 
+                  className="category-card" 
+                  key={item.id}
+                >
+                  <div className="category-image">{item.icon}</div>
+                  <div className="category-info">
+                    <div className="category-name">{item.title}</div>
+                    <div className="category-count">{item.subCategories.length} algoritma</div>
+                  </div>
+                </Link>
+              ))}
             </div>
           </section>
-        )}
-        const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-        const [quizLoading, setQuizLoading] = useState<boolean>(true);
-        const [quizError, setQuizError] = useState<string | null>(null);
-        
-        useEffect(() => {
-          const fetchQuizzes = async () => {
-            setQuizLoading(true);
-            setQuizError(null);
-            try {
-              const data = await getAllQuizzes();
-              setQuizzes(data);
-            } catch (err) {
-              setQuizError('Quizler yüklenirken hata oluştu.');
-            } finally {
-              setQuizLoading(false);
-            }
-          };
-          fetchQuizzes();
-        }, []);
+          
+          <section className="main-section">
+            <div className="section-title">
+              <span className="section-title-accent"></span>
+              Popüler Algoritmalar
+            </div>
+            <div className="featured-algorithms">
+              {featuredCards.map(card => (
+                <Link 
+                  to={card.link} 
+                  className="algorithm-card" 
+                  key={card.id}
+                >
+                  <div className="algorithm-info">
+                    <div className="algorithm-title">{card.title}</div>
+                    <div className="algorithm-description">{card.description}</div>
+                    <div className="algorithm-complexity">Karmaşıklık: {card.complexity}</div>
+                  </div>
+                  <div className="algorithm-icon">{card.icon}</div>
+                </Link>
+              ))}
+            </div>
+          </section>
+          
+          {!isLoggedIn && (
+            <section className="main-section login-prompt-section">
+              <div className="section-title">
+                <span className="section-title-accent"></span>
+                Hesap Oluşturun
+              </div>
+              <div className="login-prompt">
+                <p>Algoritma Kütüphanesi'nde hesap oluşturarak favori algoritmaları kaydedin ve ziyaret geçmişinizi takip edin.</p>
+                <Link to="/login" className="login-button">
+                  Giriş Yap / Kayıt Ol
+                </Link>
+              </div>
+            </section>
+          )}
+          
+          {/* Quiz Bölümü */}
+          <section className="main-section">
+            <div className="section-title">
+              <span className="section-title-accent"></span>
+              Algoritma Quizleri
+            </div>
+            
+            {quizLoading ? (
+              <div className="quiz-loading">
+                <p>Quizler yükleniyor...</p>
+              </div>
+            ) : quizError ? (
+              <div className="quiz-error">
+                <p>{quizError}</p>
+              </div>
+            ) : quizzes.length === 0 ? (
+              <div className="no-quizzes">
+                <p>Şu anda hiç quiz bulunmamaktadır.</p>
+              </div>
+            ) : (
+              <div className="quiz-cards-container">
+                {quizzes.map((quiz) => (
+                  <div 
+                    key={quiz._id} 
+                    className="quiz-card"
+                    onClick={() => navigate(`/quiz/${quiz._id}`)}
+                  >
+                    <div className="quiz-card-header">
+                      <h3>{quiz.title}</h3>
+                      <span 
+                        className="quiz-difficulty"
+                        style={{ 
+                          backgroundColor: difficultyColors[quiz.difficulty as keyof typeof difficultyColors] 
+                        }}
+                      >
+                        {quiz.difficulty}
+                      </span>
+                    </div>
+                    <p className="quiz-description">{quiz.description}</p>
+                    <div className="quiz-details">
+                      <span className="quiz-time">
+                        <span role="img" aria-label="saat">⏱️</span> {quiz.timeLimit || 0} dakika
+                      </span>
+                      <span className="quiz-questions">
+                        <span role="img" aria-label="soru">❓</span> {((quiz.multipleChoiceQuestions?.length || 0) + (quiz.codeCompletionQuestions?.length || 0))} soru
+                      </span>
+                      <span className="quiz-score">
+                        <span role="img" aria-label="puan">🎯</span> Geçme Puanı: {quiz.passingScore || 0}
+                      </span>
+                    </div>
+                    <button className="quiz-start-button">
+                      Quizi Başlat
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
+      <ChatBotTrigger />
+    </React.Fragment>
   );
 };
 

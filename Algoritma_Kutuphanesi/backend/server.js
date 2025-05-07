@@ -595,7 +595,7 @@ app.get('/api/algorithms/:algorithmId/quizzes', async (req, res) => {
     }
     
     // Algoritma için quizleri getir
-    const quizzes = await Quiz.find({ algorithmId }, 'title description difficulty timeLimit totalPoints');
+    const quizzes = await Quiz.find({ algorithmId }, 'title description difficulty timeLimit totalPoints multipleChoiceQuestions codeCompletionQuestions passingScore');
     
     res.json(quizzes);
   } catch (error) {
@@ -642,7 +642,7 @@ app.get('/api/algorithms/:title', async (req, res) => {
 // Tüm quizleri getir
 app.get('/api/quizzes', async (req, res) => {
   try {
-    const quizzes = await Quiz.find({}, 'title description difficulty timeLimit totalPoints').populate('algorithmId', 'title');
+    const quizzes = await Quiz.find({}, 'title description difficulty timeLimit totalPoints multipleChoiceQuestions codeCompletionQuestions passingScore').populate('algorithmId', 'title');
     res.json(quizzes);
   } catch (error) {
     console.error('Quizleri getirme hatası:', error);
@@ -679,43 +679,64 @@ app.post('/api/quizzes/:quizId/start', async (req, res) => {
     const { quizId } = req.params;
     const { userId } = req.body;
     
-    // Kullanıcı ve quiz'in var olup olmadığını kontrol et
-    const [user, quiz] = await Promise.all([
-      User.findById(userId),
-      Quiz.findById(quizId)
-    ]);
+    console.log(`Quiz başlatma isteği: quizId=${quizId}, userId=${userId || 'Misafir kullanıcı'}`);
     
-    if (!user) {
-      return res.status(404).json({
-        error: 'Kullanıcı bulunamadı'
-      });
-    }
+    // Önce quizi bul
+    const quiz = await Quiz.findById(quizId);
     
     if (!quiz) {
+      console.error(`Quiz bulunamadı: ${quizId}`);
       return res.status(404).json({
         error: 'Quiz bulunamadı'
       });
     }
     
-    // Aktif bir girişim olup olmadığını kontrol et
-    const activeAttempt = await QuizAttempt.findOne({
-      userId,
-      quizId,
-      completed: false
-    });
+    console.log(`Quiz bulundu: ${quiz.title}`);
     
-    if (activeAttempt) {
-      return res.json(activeAttempt);
+    // Kullanıcı kimliği sağlanmışsa, kullanıcıyı kontrol et
+    let user = null;
+    if (userId) {
+      user = await User.findById(userId);
+      
+      if (!user) {
+        console.error(`Kullanıcı bulunamadı: ${userId}`);
+        // Kullanıcı bulunamadıysa bile quiz'e devam edebilir,
+        // ancak ilerleme kaydedilmeyecek
+        console.log('Kullanıcı bulunamadı. Misafir modunda devam ediliyor.');
+      }
     }
     
-    // Yeni bir girişim oluştur
-    const newAttempt = new QuizAttempt({
-      userId,
-      quizId,
-      startTime: new Date()
-    });
+    let attemptId = null;
     
-    await newAttempt.save();
+    // Kullanıcı varsa aktif girişim kontrolü yap
+    if (user) {
+      // Aktif bir girişim olup olmadığını kontrol et
+      const activeAttempt = await QuizAttempt.findOne({
+        userId,
+        quizId,
+        completed: false
+      });
+      
+      if (activeAttempt) {
+        console.log(`Aktif quiz girişimi bulundu: ${activeAttempt._id}`);
+        attemptId = activeAttempt._id;
+      } else {
+        // Yeni bir girişim oluştur
+        const newAttempt = new QuizAttempt({
+          userId,
+          quizId,
+          startTime: new Date()
+        });
+        
+        await newAttempt.save();
+        console.log(`Yeni quiz girişimi oluşturuldu: ${newAttempt._id}`);
+        attemptId = newAttempt._id;
+      }
+    } else {
+      // Misafir kullanıcı için geçici bir girişim oluştur (kaydedilmez)
+      console.log('Misafir kullanıcı için geçici girişim kimliği oluşturuluyor');
+      attemptId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    }
     
     // Soruları gizleyerek quiz verilerini gönder
     const quizData = {
@@ -733,20 +754,23 @@ app.post('/api/quizzes/:quizId/start', async (req, res) => {
           text: o.text
         }))
       })),
-      codeCompletionQuestions: quiz.codeCompletionQuestions.map(q => ({
-        _id: q._id,
-        question: q.question,
-        codeTemplate: q.codeTemplate,
-        hints: q.hints
-      })),
-      attemptId: newAttempt._id
+      codeCompletionQuestions: quiz.codeCompletionQuestions && quiz.codeCompletionQuestions.length > 0 
+        ? quiz.codeCompletionQuestions.map(q => ({
+            _id: q._id,
+            question: q.question,
+            codeTemplate: q.codeTemplate,
+            hints: q.hints
+          }))
+        : [],
+      attemptId: attemptId
     };
     
-    res.status(201).json(quizData);
+    console.log(`Quiz verisi hazırlandı, sorular: MC=${quizData.multipleChoiceQuestions.length}, CC=${quizData.codeCompletionQuestions.length}`);
+    res.status(200).json(quizData);
   } catch (error) {
     console.error('Quiz başlatma hatası:', error);
     res.status(500).json({
-      error: 'Quiz başlatırken bir hata oluştu'
+      error: `Quiz başlatırken bir hata oluştu: ${error.message}`
     });
   }
 });
@@ -757,8 +781,66 @@ app.post('/api/quiz-attempts/:attemptId/multiple-choice', async (req, res) => {
     const { attemptId } = req.params;
     const { questionIndex, selectedOptions } = req.body;
     
-    // Girişimin var olup olmadığını kontrol et
-    const attempt = await QuizAttempt.findById(attemptId);
+    // Geçici ID kontrolü (misafir kullanıcı için)
+    if (attemptId.startsWith('temp_')) {
+      // Misafir kullanıcı için doğrudan quiz bilgilerini getir
+      const quizId = req.body.quizId; // İstek gövdesinden quiz ID'sini al
+      
+      if (!quizId) {
+        return res.status(400).json({
+          error: 'Quiz ID gereklidir'
+        });
+      }
+      
+      // MongoDB ObjectId formatını kontrol et
+      let quiz;
+      try {
+        quiz = await Quiz.findById(quizId);
+      } catch (err) {
+        console.error('Geçersiz Quiz ID formatı:', err);
+        return res.status(400).json({
+          error: 'Geçersiz Quiz ID formatı'
+        });
+      }
+      
+      if (!quiz || !quiz.multipleChoiceQuestions[questionIndex]) {
+        return res.status(404).json({
+          error: 'Quiz veya soru bulunamadı'
+        });
+      }
+      
+      // Soruyu ve doğru cevapları al
+      const question = quiz.multipleChoiceQuestions[questionIndex];
+      const correctOptionIndices = question.options
+        .map((option, index) => option.isCorrect ? index : null)
+        .filter(index => index !== null);
+      
+      // Cevabın doğruluğunu kontrol et
+      const isCorrect = selectedOptions.length === correctOptionIndices.length &&
+        selectedOptions.every(index => correctOptionIndices.includes(index));
+      
+      // Her soru 10 puan değerinde
+      const pointsEarned = isCorrect ? 10 : 0;
+      
+      return res.json({
+        isCorrect,
+        pointsEarned,
+        explanation: isCorrect 
+          ? question.options.find(o => o.isCorrect)?.explanation 
+          : question.options.filter((_, i) => selectedOptions.includes(i)).map(o => o.explanation).join(' ')
+      });
+    }
+    
+    // Kayıtlı kullanıcı için normal işlem
+    let attempt;
+    try {
+      attempt = await QuizAttempt.findById(attemptId);
+    } catch (err) {
+      console.error('Geçersiz Attempt ID formatı:', err);
+      return res.status(400).json({
+        error: 'Geçersiz Quiz Girişimi ID formatı'
+      });
+    }
     
     if (!attempt) {
       return res.status(404).json({
@@ -836,8 +918,64 @@ app.post('/api/quiz-attempts/:attemptId/code-completion', async (req, res) => {
     const { attemptId } = req.params;
     const { questionIndex, userCode } = req.body;
     
-    // Girişimin var olup olmadığını kontrol et
-    const attempt = await QuizAttempt.findById(attemptId);
+    // Geçici ID kontrolü (misafir kullanıcı için)
+    if (attemptId.startsWith('temp_')) {
+      // Misafir kullanıcı için doğrudan quiz bilgilerini getir
+      const quizId = req.body.quizId; // İstek gövdesinden quiz ID'sini al
+      
+      if (!quizId) {
+        return res.status(400).json({
+          error: 'Quiz ID gereklidir'
+        });
+      }
+      
+      // MongoDB ObjectId formatını kontrol et
+      let quiz;
+      try {
+        quiz = await Quiz.findById(quizId);
+      } catch (err) {
+        console.error('Geçersiz Quiz ID formatı:', err);
+        return res.status(400).json({
+          error: 'Geçersiz Quiz ID formatı'
+        });
+      }
+      
+      if (!quiz || !quiz.codeCompletionQuestions[questionIndex]) {
+        return res.status(404).json({
+          error: 'Quiz veya soru bulunamadı'
+        });
+      }
+      
+      // Soruyu al
+      const question = quiz.codeCompletionQuestions[questionIndex];
+      
+      // Basit bir kod doğrulama: çözüm kullanıcı kodunda var mı?
+      const solution = question.solution.trim();
+      const normalizedUserCode = userCode.trim();
+      const isCorrect = normalizedUserCode.includes(solution);
+      
+      // Kod tamamlama soruları 20 puan değerinde
+      const pointsEarned = isCorrect ? 20 : 0;
+      
+      return res.json({
+        isCorrect,
+        pointsEarned,
+        feedback: isCorrect 
+          ? 'Harika! Doğru çözümü buldunuz.' 
+          : `Çözümünüz doğru değil. İpucu: ${question.hints[0]}`
+      });
+    }
+    
+    // Kayıtlı kullanıcı için normal işlem
+    let attempt;
+    try {
+      attempt = await QuizAttempt.findById(attemptId);
+    } catch (err) {
+      console.error('Geçersiz Attempt ID formatı:', err);
+      return res.status(400).json({
+        error: 'Geçersiz Quiz Girişimi ID formatı'
+      });
+    }
     
     if (!attempt) {
       return res.status(404).json({
@@ -914,8 +1052,65 @@ app.post('/api/quiz-attempts/:attemptId/finish', async (req, res) => {
   try {
     const { attemptId } = req.params;
     
-    // Girişimin var olup olmadığını kontrol et
-    const attempt = await QuizAttempt.findById(attemptId);
+    // Geçici ID kontrolü (misafir kullanıcı için)
+    if (attemptId.startsWith('temp_')) {
+      // Misafir kullanıcı için doğrudan sonuçları hesapla
+      const { quizId, multipleChoiceAnswers = [], codeCompletionAnswers = [] } = req.body;
+      
+      if (!quizId) {
+        return res.status(400).json({
+          error: 'Quiz ID gereklidir'
+        });
+      }
+      
+      // MongoDB ObjectId formatını kontrol et
+      let quiz;
+      try {
+        quiz = await Quiz.findById(quizId);
+      } catch (err) {
+        console.error('Geçersiz Quiz ID formatı:', err);
+        return res.status(400).json({
+          error: 'Geçersiz Quiz ID formatı'
+        });
+      }
+      
+      if (!quiz) {
+        return res.status(404).json({
+          error: 'Quiz bulunamadı'
+        });
+      }
+      
+      // Toplam puanları hesapla
+      let totalEarned = 0;
+      
+      // Çoktan seçmeli sorular için puanları topla
+      multipleChoiceAnswers.forEach(answer => {
+        totalEarned += answer.isCorrect ? 10 : 0;
+      });
+      
+      // Kod tamamlama soruları için puanları topla
+      codeCompletionAnswers.forEach(answer => {
+        totalEarned += answer.isCorrect ? 20 : 0;
+      });
+      
+      // Sonuçları döndür
+      return res.json({
+        score: totalEarned,
+        totalPossible: quiz.totalPoints,
+        passed: totalEarned >= quiz.passingScore
+      });
+    }
+    
+    // Kayıtlı kullanıcı için normal işlem
+    let attempt;
+    try {
+      attempt = await QuizAttempt.findById(attemptId);
+    } catch (err) {
+      console.error('Geçersiz Attempt ID formatı:', err);
+      return res.status(400).json({
+        error: 'Geçersiz Quiz Girişimi ID formatı'
+      });
+    }
     
     if (!attempt) {
       return res.status(404).json({
@@ -935,7 +1130,102 @@ app.post('/api/quiz-attempts/:attemptId/finish', async (req, res) => {
     // Girişimi güncelle
     await attempt.save();
     
-    res.json(results);
+    // Kullanıcı başarılı olduysa ve giriş yapılmışsa rozetleri ve XP'yi güncelle
+    let badges = [];
+    let xpUpdate = { gained: 0, levelUp: false };
+
+    if (results.passed && attempt.userId) {
+      try {
+        // Kullanıcının ilerleme bilgisini getir
+        let userProgress = await UserProgress.findOne({ userId: attempt.userId });
+        
+        if (!userProgress) {
+          userProgress = new UserProgress({ userId: attempt.userId });
+        }
+        
+        // Tamamlanan quiz sayacını artır
+        userProgress.completedQuizzesCount = (userProgress.completedQuizzesCount || 0) + 1;
+        
+        // XP ekle - Başarılı quiz için 50 XP kazandır
+        xpUpdate = userProgress.addXP(50);
+        
+        // QUIZ_MASTER rozeti kontrolü
+        // Kullanıcının daha önce bu rozeti alıp almadığına bak
+        if (!userProgress.achievements.some(a => a.type === 'QUIZ_MASTER')) {
+          const quizMasterBadge = await Badge.findOne({ type: 'QUIZ_MASTER' });
+          
+          if (quizMasterBadge) {
+            const badgeAdded = userProgress.addAchievement({
+              type: 'QUIZ_MASTER',
+              name: quizMasterBadge.name,
+              description: quizMasterBadge.description,
+              icon: quizMasterBadge.icon,
+              relatedEntity: attempt.quizId,
+              relatedEntityModel: 'Quiz'
+            });
+            
+            if (badgeAdded) {
+              // Rozet XP'si ekle
+              const badgeXpUpdate = userProgress.addXP(quizMasterBadge.xpReward);
+              xpUpdate.gained += badgeXpUpdate.levelUp ? badgeXpUpdate.gained : quizMasterBadge.xpReward;
+              xpUpdate.levelUp = xpUpdate.levelUp || badgeXpUpdate.levelUp;
+              
+              badges.push({
+                type: 'QUIZ_MASTER',
+                name: quizMasterBadge.name,
+                icon: quizMasterBadge.icon,
+                xpReward: quizMasterBadge.xpReward
+              });
+            }
+          }
+        }
+        
+        // QUIZ_GENIUS rozeti kontrolü - birden fazla quizi geçen kullanıcılar için
+        if (userProgress.completedQuizzesCount >= 3 && 
+           !userProgress.achievements.some(a => a.type === 'QUIZ_GENIUS')) {
+          const quizGeniusBadge = await Badge.findOne({ type: 'QUIZ_GENIUS' });
+          
+          if (quizGeniusBadge) {
+            const badgeAdded = userProgress.addAchievement({
+              type: 'QUIZ_GENIUS',
+              name: quizGeniusBadge.name,
+              description: quizGeniusBadge.description,
+              icon: quizGeniusBadge.icon
+            });
+            
+            if (badgeAdded) {
+              // Rozet XP'si ekle
+              const badgeXpUpdate = userProgress.addXP(quizGeniusBadge.xpReward);
+              xpUpdate.gained += badgeXpUpdate.levelUp ? badgeXpUpdate.gained : quizGeniusBadge.xpReward;
+              xpUpdate.levelUp = xpUpdate.levelUp || badgeXpUpdate.levelUp;
+              
+              badges.push({
+                type: 'QUIZ_GENIUS',
+                name: quizGeniusBadge.name,
+                icon: quizGeniusBadge.icon,
+                xpReward: quizGeniusBadge.xpReward
+              });
+            }
+          }
+        }
+        
+        // Kullanıcı streak'ini güncelle
+        userProgress.updateStreak();
+        
+        // İlerlemeyi kaydet
+        await userProgress.save();
+      } catch (error) {
+        console.error('Rozet ve XP güncellemesi sırasında hata:', error);
+        // Sadece loglama yap, ana işlemi durdurmamak için hatayı yukarıya taşıma
+      }
+    }
+    
+    // Sonuçlarla birlikte rozet bilgilerini de döndür
+    res.json({
+      ...results,
+      badges,
+      xpUpdate
+    });
   } catch (error) {
     console.error('Quiz tamamlama hatası:', error);
     res.status(500).json({
@@ -1832,4 +2122,4 @@ app.get('/api/users/:userId/notes', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT} portunda çalışıyor`);
-}); 
+});

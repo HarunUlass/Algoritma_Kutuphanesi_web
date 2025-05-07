@@ -51,11 +51,11 @@ export const api = {
     getByTitle: (title: string) => fetchApi(`/algorithms/${title}`, 'GET')
   },
   quiz: {
-    getAll: () => fetchApi('/quiz', 'GET'),
-    getByAlgorithmId: (algorithmId: string) => fetchApi(`/quiz/algorithm/${algorithmId}`, 'GET'),
-    getById: (quizId: string) => fetchApi(`/quiz/${quizId}`, 'GET'),
-    submitAttempt: (attemptData: any) => fetchApi('/quiz/attempt', 'POST', attemptData),
-    getUserAttempts: (userId: string) => fetchApi(`/quiz/attempts/${userId}`, 'GET')
+    getAll: () => fetchApi('/quizzes', 'GET'),
+    getByAlgorithmId: (algorithmId: string) => fetchApi(`/algorithms/${algorithmId}/quizzes`, 'GET'),
+    getById: (quizId: string) => fetchApi(`/quizzes/${quizId}`, 'GET'),
+    submitAttempt: (attemptData: any) => fetchApi(`/quiz-attempts/${attemptData.quizId}/finish`, 'POST', attemptData),
+    getUserAttempts: (userId: string) => fetchApi(`/users/${userId}/quiz-stats`, 'GET')
   }
 };
 

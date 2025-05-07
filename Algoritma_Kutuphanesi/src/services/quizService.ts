@@ -46,6 +46,21 @@ export interface CodeCompletionAnswer {
   feedback?: string;
 }
 
+// Rozet tipini tanımlayalım
+export interface Badge {
+  type: string;
+  name: string;
+  icon: string;
+  xpReward: number;
+}
+
+// XP güncellemesi için arayüz
+export interface XpUpdate {
+  gained: number;
+  levelUp: boolean;
+  newLevel?: number;
+}
+
 export interface QuizAttempt {
   userId: string;
   quizId: string;
@@ -56,6 +71,8 @@ export interface QuizAttempt {
   codeCompletionAnswers: CodeCompletionAnswer[];
   score: number;
   passed: boolean;
+  badges?: Badge[]; // Kazanılan rozetler
+  xpUpdate?: XpUpdate; // XP güncelleme bilgisi
 }
 
 // Quiz verilerini getir
@@ -158,7 +175,14 @@ export const calculateQuizResults = (quiz: Quiz, quizAttempt: QuizAttempt): Quiz
 export const getAllQuizzes = async (): Promise<Quiz[]> => {
   try {
     const quizzes = await api.quiz.getAll();
-    return quizzes || [];
+    console.log('Alınan ham quiz verileri:', quizzes);
+    
+    // Ensure each quiz has the required properties
+    return (quizzes || []).map((quiz: any) => ({
+      ...quiz,
+      multipleChoiceQuestions: quiz.multipleChoiceQuestions || [],
+      codeCompletionQuestions: quiz.codeCompletionQuestions || []
+    }));
   } catch (error) {
     console.error('Quiz listesi alınırken hata:', error);
     return [];

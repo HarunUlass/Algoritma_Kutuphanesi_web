@@ -807,4 +807,122 @@ body, html {
   border-radius: 3px;
   font-weight: 600;
   color: #FF6F00;
+}
+
+/* Quiz Kartları Stilleri */
+.quiz-cards-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.quiz-card {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 140, 0, 0.1);
+  padding: 20px;
+}
+
+.quiz-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(255, 140, 0, 0.2);
+}
+
+.quiz-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.quiz-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #FF6F00;
+  font-weight: bold;
+  flex: 1;
+}
+
+.quiz-difficulty {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  color: white;
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.quiz-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.quiz-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #777;
+}
+
+.quiz-time, .quiz-questions, .quiz-score {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quiz-start-button {
+  background-color: #FF8C00;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(255, 140, 0, 0.2);
+  align-self: center;
+  width: 100%;
+}
+
+.quiz-start-button:hover {
+  background-color: #FF6F00;
+  box-shadow: 0 6px 12px rgba(255, 140, 0, 0.3);
+}
+
+.quiz-loading, .quiz-error, .no-quizzes {
+  text-align: center;
+  padding: 40px 0;
+  color: #777;
+  font-size: 16px;
+}
+
+.quiz-error {
+  color: #e74c3c;
+}
+
+/* Responsive Düzenlemeler */
+@media (max-width: 992px) {
+  .quiz-cards-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .quiz-cards-container {
+    grid-template-columns: 1fr;
+  }
 } 
