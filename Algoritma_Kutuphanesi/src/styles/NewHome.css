@@ -427,6 +427,15 @@ body, html {
   .categories-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+  
+  .quiz-cards-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .quiz-login-message {
+    padding: 25px;
+    max-width: 350px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -437,6 +446,23 @@ body, html {
   
   .home-header {
     padding: 15px 20px;
+  }
+  
+  .quiz-cards-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .quiz-login-message {
+    padding: 20px;
+    max-width: 300px;
+  }
+  
+  .quiz-login-message h3 {
+    font-size: 20px;
+  }
+  
+  .quiz-login-message p {
+    font-size: 14px;
   }
 }
 
@@ -815,6 +841,60 @@ body, html {
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-bottom: 30px;
+}
+
+/* Quiz blur and overlay styles */
+.quiz-section {
+  position: relative;
+}
+
+.quiz-blur {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.quiz-login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 15px;
+}
+
+.quiz-login-message {
+  background-color: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(255, 140, 0, 0.2);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  border: 1px solid rgba(255, 140, 0, 0.3);
+}
+
+.quiz-login-message h3 {
+  color: #FF6F00;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 24px;
+}
+
+.quiz-login-message p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.quiz-login-message .login-button {
+  display: inline-block;
+  margin: 0 auto;
 }
 
 .quiz-card {

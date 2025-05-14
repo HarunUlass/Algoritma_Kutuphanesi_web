@@ -36,6 +36,7 @@ const UserProgress = require('./models/UserProgress');
 const LearningPath = require('./models/LearningPath');
 const { Badge, initializeBadges } = require('./models/Badge');
 const ViewedAlgorithm = require('./models/ViewedAlgorithm');
+const UserBadge = require('./models/UserBadge');
 
 // Veritabanı başlatma fonksiyonu
 async function initializeData() {
@@ -1426,6 +1427,16 @@ app.post('/api/users/:userId/algo-viewed/:algorithmId', async (req, res) => {
       difficulty: req.body.difficulty || 'Orta'
     });
     
+    // İlk algoritma görüntüleme rozetini kontrol et ve gerekirse ver
+    await UserBadge.checkFirstView(userId);
+    
+    // Toplam benzersiz algoritma görüntüleme sayısını al
+    const viewedAlgorithmsCount = await ViewedAlgorithm.countDocuments({ userId });
+    console.log(`Kullanıcının görüntülediği toplam benzersiz algoritma sayısı: ${viewedAlgorithmsCount}`);
+    
+    // Algoritma görüntüleme sayısı ile ilgili rozetleri kontrol et
+    await UserBadge.checkAlgorithmViewMilestone(userId, viewedAlgorithmsCount);
+    
     res.status(200).json({ 
       success: true, 
       message: 'Algoritma görüntüleme kaydedildi'
@@ -2377,4 +2388,113 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT} portunda çalışıyor`);
+});
+
+// Kullanıcının rozetlerini getir
+app.get('/api/users/:userId/badges', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Kullanıcının varlığını kontrol et
+    const user = await User.findOne({ _id: userId }).catch(() => null);
+    if (!user) {
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Kullanıcının tüm rozetlerini getir
+    const badges = await UserBadge.getUserBadges(userId);
+    
+    res.json(badges);
+  } catch (error) {
+    console.error('Kullanıcı rozetleri getirme hatası:', error);
+    res.status(500).json({
+      error: 'Kullanıcı rozetleri alınırken bir hata oluştu'
+    });
+  }
+});
+
+// Kullanıcıya rozet kazandır (Manuel test için)
+app.post('/api/users/:userId/award-badge', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { badgeType } = req.body;
+    
+    if (!badgeType) {
+      return res.status(400).json({ error: 'badgeType parametresi eksik' });
+    }
+    
+    // Kullanıcının varlığını kontrol et
+    const user = await User.findOne({ _id: userId }).catch(() => null);
+    if (!user) {
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Rozeti kazandır
+    const badge = await UserBadge.awardBadge(userId, badgeType);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Rozet başarıyla kazandırıldı',
+      badge
+    });
+  } catch (error) {
+    console.error('Rozet kazandırma hatası:', error);
+    res.status(500).json({
+      error: error.message || 'Rozet kazandırılırken bir hata oluştu'
+    });
+  }
+});
+
+// Kullanıcının quiz girişimlerini getir
+app.get('/api/users/:userId/quiz-attempts', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Kullanıcının var olup olmadığını kontrol et
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'Kullanıcı bulunamadı'
+      });
+    }
+    
+    // Kullanıcının tamamlanmış quiz girişimlerini getir
+    const attempts = await QuizAttempt.find({
+      userId,
+      completed: true
+    })
+    .sort({ endTime: -1 }) // En son tamamlananlar önce
+    .limit(10) // Son 10 girişimi getir
+    .populate({
+      path: 'quizId',
+      select: 'title totalPoints passingScore',
+      populate: {
+        path: 'algorithmId',
+        select: 'title'
+      }
+    });
+    
+    // Kullanıcı dostu bir format oluştur
+    const formattedAttempts = attempts.map(attempt => ({
+      id: attempt._id,
+      quizId: attempt.quizId._id,
+      quizTitle: attempt.quizId.title,
+      algorithmId: attempt.quizId.algorithmId?._id || null,
+      algorithmTitle: attempt.quizId.algorithmId?.title || 'Genel Quiz',
+      score: attempt.score,
+      totalPossible: attempt.quizId.totalPoints,
+      percentage: Math.round((attempt.score / attempt.quizId.totalPoints) * 100),
+      passed: attempt.passed,
+      completedAt: attempt.endTime,
+      duration: attempt.endTime ? Math.round((attempt.endTime.getTime() - attempt.startTime.getTime()) / 1000) : null // Süre (saniye)
+    }));
+    
+    res.json(formattedAttempts);
+  } catch (error) {
+    console.error('Kullanıcı quiz girişimleri hatası:', error);
+    res.status(500).json({
+      error: 'Kullanıcı quiz girişimlerini getirirken bir hata oluştu'
+    });
+  }
 });

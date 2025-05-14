@@ -34,7 +34,6 @@ interface Badge {
 interface UserProfile {
   username: string;
   email?: string;
-  bio?: string;
   avatarColor?: string;
 }
 
@@ -47,6 +46,20 @@ interface ViewedAlgorithm {
   lastViewed: string; // ISO string tarih formatı
   viewCount: number;
   url: string; // Algoritma detay sayfasının URL'si
+}
+
+interface QuizAttempt {
+  id: string;
+  quizId: string;
+  quizTitle: string;
+  algorithmId: string | null;
+  algorithmTitle: string | null;
+  score: number;
+  totalPossible: number;
+  percentage: number;
+  passed: boolean;
+  completedAt: string;
+  duration: number | null;
 }
 
 // Rozet ikonları için yardımcı fonksiyon
@@ -102,10 +115,16 @@ const ProfileScreen: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>({
     username: '',
     email: '',
-    bio: 'Algoritma Kütüphanesi Üyesi',
     avatarColor: `#${Math.floor(Math.random() * 16777215).toString(16)}`
   });
   const [recentAlgorithms, setRecentAlgorithms] = useState<ViewedAlgorithm[]>([]);
+  const [currentPassword, setCurrentPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [updateSuccess, setUpdateSuccess] = useState<boolean>(false);
+  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
+  const [quizAttemptsLoading, setQuizAttemptsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
   
   // Gerçek uygulamada, bu liste bir state yönetim aracından gelecektir
@@ -191,6 +210,12 @@ const ProfileScreen: React.FC = () => {
 
     // Son görüntülenen algoritmaları yükle
     fetchRecentAlgorithms();
+    
+    // Kullanıcı rozetlerini yükle
+    fetchUserBadges();
+    
+    // Quiz girişimlerini yükle
+    fetchQuizAttempts();
 
     // Algoritma görüntüleme olaylarını dinle
     window.addEventListener('algorithmViewed', handleAlgorithmView as any);
@@ -201,10 +226,14 @@ const ProfileScreen: React.FC = () => {
     };
   }, [navigate]);
 
-  // activeTab 'recents' olduğunda son görüntülenen algoritmaları yükle
+  // activeTab değişince ilgili verileri yükle
   useEffect(() => {
     if (activeTab === 'recents') {
       fetchRecentAlgorithms();
+    } else if (activeTab === 'badges') {
+      fetchUserBadges();
+    } else if (activeTab === 'quiz-attempts') {
+      fetchQuizAttempts();
     }
   }, [activeTab]);
 
@@ -219,27 +248,42 @@ const ProfileScreen: React.FC = () => {
     try {
       setLoading(true);
       
-      // Gerçek uygulamada API'den rozetleri çekmek için:
-      // const userId = localStorage.getItem('userId');
-      // if (!userId) {
-      //   console.error('Kullanıcı ID bulunamadı');
-      //   setBadges(mockBadges); // Hata durumunda örnek verileri kullan
-      //   return;
-      // }
-      // 
-      // const response = await fetch(`/api/users/${userId}/achievements`);
-      // if (!response.ok) {
-      //   throw new Error('Rozet verileri alınamadı');
-      // }
-      // const data = await response.json();
-      // setBadges(data);
+      // Kullanıcı ID'sini localStorage'dan al
+      const userId = localStorage.getItem('userId');
       
-      // API entegrasyonu tamamlanana kadar örnek veriler kullanılacak
-      setTimeout(() => {
-        setBadges(mockBadges);
+      console.log('fetchUserBadges - userId from localStorage:', userId);
+      
+      if (!userId) {
+        console.error('Kullanıcı ID\'si bulunamadı');
+        setBadges(mockBadges); // Hata durumunda örnek verileri kullan
         setLoading(false);
-      }, 500);
+        return;
+      }
       
+      // userId'den "user_" önekini kaldır (eğer varsa)
+      const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
+      console.log('fetchUserBadges - kullanılan temiz userId:', cleanUserId);
+      
+      // API'den kullanıcı rozetlerini getir
+      const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/badges`;
+      console.log('fetchUserBadges - API çağrısı:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        console.error(`HTTP Hata: ${response.status} - ${await response.text()}`);
+        throw new Error(`HTTP Hata: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('fetchUserBadges - API yanıtı:', data);
+      
+      if (Array.isArray(data)) {
+        setBadges(data);
+      } else {
+        console.error('API beklenen formatta veri döndürmedi', data);
+        setBadges(mockBadges); // Hata durumunda örnek verileri kullan
+      }
     } catch (error) {
       console.error('Rozet verileri alınırken hata oluştu:', error);
       setBadges(mockBadges); // Hata durumunda örnek verileri kullan
@@ -248,7 +292,90 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
-  // Örnek rozet verileri
+  // Quiz girişimlerini yükle
+  const fetchQuizAttempts = async () => {
+    try {
+      setQuizAttemptsLoading(true);
+      const userId = localStorage.getItem('userId');
+      
+      if (!userId) {
+        console.error('Kullanıcı ID bulunamadı');
+        return;
+      }
+      
+      // userId'den "user_" önekini kaldır (eğer varsa)
+      const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
+      console.log('fetchQuizAttempts - kullanılan temiz userId:', cleanUserId);
+      
+      // API çağrısı yap
+      const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/quiz-attempts`;
+      console.log('fetchQuizAttempts - API çağrısı:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        console.error(`HTTP Hata: ${response.status} - ${await response.text()}`);
+        console.log('API çağrısı başarısız olduğu için örnek veriler kullanılacak');
+        setQuizAttempts(mockQuizAttempts);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('fetchQuizAttempts - API yanıtı:', data);
+      setQuizAttempts(data);
+    } catch (error) {
+      console.error('Quiz girişimleri getirme hatası:', error);
+      console.log('Hata nedeniyle örnek veriler kullanılacak');
+      setQuizAttempts(mockQuizAttempts);
+    } finally {
+      setQuizAttemptsLoading(false);
+    }
+  };
+
+  // Örnek quiz girişimleri - API çağrısı başarısız olduğunda kullanılacak
+  const mockQuizAttempts: QuizAttempt[] = [
+    {
+      id: '1',
+      quizId: '101',
+      quizTitle: 'Bubble Sort Quiz',
+      algorithmId: '201',
+      algorithmTitle: 'Bubble Sort',
+      score: 35,
+      totalPossible: 40,
+      percentage: 88,
+      passed: true,
+      completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 gün önce
+      duration: 450 // 7.5 dakika
+    },
+    {
+      id: '2',
+      quizId: '102',
+      quizTitle: 'Quick Sort Quiz',
+      algorithmId: '202',
+      algorithmTitle: 'Quick Sort',
+      score: 30,
+      totalPossible: 50,
+      percentage: 60,
+      passed: true,
+      completedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 gün önce
+      duration: 720 // 12 dakika
+    },
+    {
+      id: '3',
+      quizId: '103',
+      quizTitle: 'Merge Sort Quiz',
+      algorithmId: '203',
+      algorithmTitle: 'Merge Sort',
+      score: 12,
+      totalPossible: 30,
+      percentage: 40,
+      passed: false,
+      completedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 gün önce
+      duration: 380 // 6.3 dakika
+    }
+  ];
+
+  // Örnek rozet verileri - sadece API çağrısı başarısız olduğunda kullanılacak
   const mockBadges: Badge[] = [
     {
       type: 'LEARNER',
@@ -493,22 +620,81 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleProfileUpdate = () => {
-    // Kullanıcı bilgilerini güncelle
-    localStorage.setItem('username', profile.username);
-    setUsername(profile.username);
-    setIsEditMode(false);
+    // Öncelikle hata ve başarı durumlarını sıfırla
+    setUpdateError(null);
+    setUpdateSuccess(false);
     
-    // Gerçek uygulamada burada API çağrısı yapılacak
-    // Örneğin:
-    // const userId = localStorage.getItem('userId');
-    // fetch(`/api/users/${userId}`, {
-    //   method: 'PUT',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(profile)
-    // });
-
-    // Başarılı güncelleme mesajı
-    alert('Profil başarıyla güncellendi!');
+    // Şifre alanlarının doğruluğunu kontrol et
+    if (newPassword && newPassword !== confirmPassword) {
+      setUpdateError('Yeni şifre ve şifre onayı eşleşmiyor');
+      return;
+    }
+    
+    // Herhangi bir değişiklik için mevcut şifre gereklidir
+    if (!currentPassword) {
+      setUpdateError('Değişiklikleri onaylamak için mevcut şifrenizi girmelisiniz');
+      return;
+    }
+    
+    // Kullanıcı ID'sini localStorage'dan al
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      setUpdateError('Kullanıcı kimliği bulunamadı, lütfen tekrar giriş yapın');
+      return;
+    }
+    
+    // userId'den "user_" önekini kaldır (eğer varsa)
+    const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
+    
+    // API isteği için verileri hazırla
+    const updateData: any = {
+      username: profile.username,
+      email: profile.email || undefined,
+      currentPassword
+    };
+    
+    // Yeni şifre girilmişse ekle
+    if (newPassword) {
+      updateData.password = newPassword;
+    }
+    
+    // API isteği gönder
+    fetch(`http://localhost:3000/api/users/${cleanUserId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateData)
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(data => {
+          throw new Error(data.error || 'Profil güncellenirken bir hata oluştu');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Güncelleme başarılıysa state'i güncelle
+      localStorage.setItem('username', profile.username);
+      setUsername(profile.username);
+      setUpdateSuccess(true);
+      
+      // Şifre alanlarını temizle
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      // 2 saniye sonra edit modundan çık
+      setTimeout(() => {
+        setIsEditMode(false);
+        setUpdateSuccess(false);
+      }, 2000);
+    })
+    .catch(error => {
+      console.error('Profil güncelleme hatası:', error);
+      setUpdateError(error.message);
+    });
   };
 
   const handleLogout = () => {
@@ -545,7 +731,6 @@ const ProfileScreen: React.FC = () => {
                 </div>
                 <div className="profile-details">
                   <h2>{profile.username}</h2>
-                  <p>{profile.bio}</p>
                   {profile.email && <p className="profile-email">{profile.email}</p>}
                 </div>
                 <div className="profile-actions">
@@ -577,16 +762,19 @@ const ProfileScreen: React.FC = () => {
                   >
                     {profile.username ? profile.username.charAt(0).toUpperCase() : 'K'}
                   </div>
-                  <button 
-                    className="change-avatar-color"
-                    onClick={() => setProfile({
-                      ...profile,
-                      avatarColor: `#${Math.floor(Math.random() * 16777215).toString(16)}`
-                    })}
-                  >
-                    🎨 Renk Değiştir
-                  </button>
                 </div>
+                
+                {updateError && (
+                  <div className="update-error">
+                    <span className="error-icon">⚠️</span> {updateError}
+                  </div>
+                )}
+                
+                {updateSuccess && (
+                  <div className="update-success">
+                    <span className="success-icon">✅</span> Profil başarıyla güncellendi!
+                  </div>
+                )}
                 
                 <div className="edit-field">
                   <label htmlFor="username">Kullanıcı Adı</label>
@@ -600,7 +788,7 @@ const ProfileScreen: React.FC = () => {
                 </div>
                 
                 <div className="edit-field">
-                  <label htmlFor="email">E-posta (isteğe bağlı)</label>
+                  <label htmlFor="email">E-posta</label>
                   <input
                     id="email"
                     type="email"
@@ -611,20 +799,50 @@ const ProfileScreen: React.FC = () => {
                 </div>
                 
                 <div className="edit-field">
-                  <label htmlFor="bio">Biyografi</label>
-                  <textarea
-                    id="bio"
-                    value={profile.bio || ''}
-                    onChange={(e) => setProfile({...profile, bio: e.target.value})}
-                    placeholder="Kendiniz hakkında kısa bir açıklama"
-                    rows={3}
+                  <label htmlFor="currentPassword">Mevcut Şifre <span className="required">*</span></label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Değişiklikleri onaylamak için mevcut şifrenizi girin"
+                    required
+                  />
+                  <small className="field-hint">Değişiklikleri onaylamak için mevcut şifrenizi girmelisiniz.</small>
+                </div>
+                
+                <div className="edit-field">
+                  <label htmlFor="newPassword">Yeni Şifre</label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Şifrenizi değiştirmek istiyorsanız doldurun"
+                  />
+                </div>
+                
+                <div className="edit-field">
+                  <label htmlFor="confirmPassword">Şifre Onayı</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Yeni şifrenizi tekrar girin"
                   />
                 </div>
                 
                 <div className="edit-actions">
                   <button 
                     className="cancel-button"
-                    onClick={() => setIsEditMode(false)}
+                    onClick={() => {
+                      setIsEditMode(false);
+                      setUpdateError(null);
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                    }}
                   >
                     İptal
                   </button>
@@ -766,6 +984,53 @@ const ProfileScreen: React.FC = () => {
             )}
           </div>
         );
+      case 'quiz-attempts':
+        return (
+          <div className="profile-quiz-attempts-container">
+            <h2 className="section-title">Quiz Girişimlerim</h2>
+            
+            {quizAttemptsLoading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <div className="loading-text">Quiz girişimleri yükleniyor...</div>
+              </div>
+            ) : quizAttempts.length === 0 ? (
+              <div className="quiz-attempts-empty">
+                <div className="empty-icon">📝</div>
+                <div className="empty-message">Henüz hiç quiz çözmediniz</div>
+                <div className="empty-suggestion">Algoritma kütüphanesindeki quizleri çözmeye başlayın!</div>
+                <Link to="/" className="explore-button">Quizleri Keşfet</Link>
+              </div>
+            ) : (
+              <div className="quiz-attempts-list">
+                {quizAttempts.map(attempt => (
+                  <div className="quiz-attempt-item" key={attempt.id}>
+                    <div className="attempt-score-badge" style={{ 
+                      background: attempt.passed ? 'linear-gradient(135deg, #4CAF50, #2E7D32)' : 'linear-gradient(135deg, #e74c3c, #c0392b)'
+                    }}>
+                      <div className="attempt-score-value">{attempt.percentage}%</div>
+                      <div className="attempt-status">{attempt.passed ? 'Başarılı' : 'Başarısız'}</div>
+                    </div>
+                    <div className="attempt-details">
+                      <div className="attempt-quiz-title">{attempt.quizTitle}</div>
+                      {attempt.algorithmTitle && (
+                        <div className="attempt-algorithm">
+                          <span className="algorithm-label">Algoritma: </span>
+                          <span className="algorithm-name">{attempt.algorithmTitle}</span>
+                        </div>
+                      )}
+                      <div className="attempt-meta">
+                        <span className="attempt-score-detail">{attempt.score} / {attempt.totalPossible} puan</span>
+                        <span className="attempt-date">{formatDate(attempt.completedAt)}</span>
+                        {attempt.duration && <span className="attempt-duration">{Math.floor(attempt.duration / 60)}:{(attempt.duration % 60).toString().padStart(2, '0')} dakika</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
       default:
         return null;
     }
@@ -780,6 +1045,30 @@ const ProfileScreen: React.FC = () => {
         return Math.max(Math.min(num, 255), 0).toString(16).padStart(2, '0');
       })
       .join('') || color;
+  };
+
+  // Profil sayfası yüklendiğinde, sunucu durumunu kontrol et
+  useEffect(() => {
+    // Server durumunu kontrol et
+    checkServerStatus();
+  }, []);
+
+  // Backend sunucusunun durumunu kontrol et
+  const checkServerStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/algorithms', { 
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        console.error('Server ulaşılamıyor veya hata döndürüyor:', response.status);
+        alert('Backend sunucusu çalışmıyor veya ulaşılamıyor olabilir. Bazı veriler görüntülenemeyebilir.');
+      }
+    } catch (error) {
+      console.error('Server bağlantı hatası:', error);
+      alert('Backend sunucusuna bağlantı kurulamadı. Lütfen sunucunun çalıştığından emin olun.');
+    }
   };
 
   if (!isLoggedIn) {
@@ -843,6 +1132,13 @@ const ProfileScreen: React.FC = () => {
         >
           <span className="tab-icon">🏆</span>
           <span className="tab-label">Rozetlerim</span>
+        </button>
+        <button 
+          className={`profile-tab ${activeTab === 'quiz-attempts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('quiz-attempts')}
+        >
+          <span className="tab-icon">📝</span>
+          <span className="tab-label">Quiz Girişimlerim</span>
         </button>
       </div>
     </div>

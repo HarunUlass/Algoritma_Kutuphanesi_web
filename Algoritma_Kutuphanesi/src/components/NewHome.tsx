@@ -510,7 +510,7 @@ const NewHome: React.FC = () => {
                 Hesap Oluşturun
               </div>
               <div className="login-prompt">
-                <p>Algoritma Kütüphanesi'nde hesap oluşturarak favori algoritmaları kaydedin ve ziyaret geçmişinizi takip edin.</p>
+                <p>Algoritma Kütüphanesi'nde hesap oluşturarak quizlerimizi çözüp ve ziyaret geçmişinizi takip edin.</p>
                 <Link to="/login" className="login-button">
                   Giriş Yap / Kayıt Ol
                 </Link>
@@ -525,56 +525,71 @@ const NewHome: React.FC = () => {
               Algoritma Quizleri
             </div>
             
-            {quizLoading ? (
-              <div className="quiz-loading">
-                <p>Quizler yükleniyor...</p>
-              </div>
-            ) : quizError ? (
-              <div className="quiz-error">
-                <p>{quizError}</p>
-              </div>
-            ) : quizzes.length === 0 ? (
-              <div className="no-quizzes">
-                <p>Şu anda hiç quiz bulunmamaktadır.</p>
-              </div>
-            ) : (
-              <div className="quiz-cards-container">
-                {quizzes.map((quiz) => (
-                  <div 
-                    key={quiz._id} 
-                    className="quiz-card"
-                    onClick={() => navigate(`/quiz/${quiz._id}`)}
-                  >
-                    <div className="quiz-card-header">
-                      <h3>{quiz.title}</h3>
-                      <span 
-                        className="quiz-difficulty"
-                        style={{ 
-                          backgroundColor: difficultyColors[quiz.difficulty as keyof typeof difficultyColors] 
-                        }}
-                      >
-                        {quiz.difficulty}
-                      </span>
+            <div className={`quiz-section ${!isLoggedIn ? 'quiz-blur' : ''}`}>
+              {quizLoading ? (
+                <div className="quiz-loading">
+                  <p>Quizler yükleniyor...</p>
+                </div>
+              ) : quizError ? (
+                <div className="quiz-error">
+                  <p>{quizError}</p>
+                </div>
+              ) : quizzes.length === 0 ? (
+                <div className="no-quizzes">
+                  <p>Şu anda hiç quiz bulunmamaktadır.</p>
+                </div>
+              ) : (
+                <div className="quiz-cards-container">
+                  {quizzes.map((quiz) => (
+                    <div 
+                      key={quiz._id} 
+                      className="quiz-card"
+                      onClick={() => isLoggedIn ? navigate(`/quiz/${quiz._id}`) : navigate('/login')}
+                    >
+                      <div className="quiz-card-header">
+                        <h3>{quiz.title}</h3>
+                        <span 
+                          className="quiz-difficulty"
+                          style={{ 
+                            backgroundColor: difficultyColors[quiz.difficulty as keyof typeof difficultyColors] 
+                          }}
+                        >
+                          {quiz.difficulty}
+                        </span>
+                      </div>
+                      <p className="quiz-description">{quiz.description}</p>
+                      <div className="quiz-details">
+                        <span className="quiz-time">
+                          <span role="img" aria-label="saat">⏱️</span> {quiz.timeLimit || 0} dakika
+                        </span>
+                        <span className="quiz-questions">
+                          <span role="img" aria-label="soru">❓</span> {((quiz.multipleChoiceQuestions?.length || 0) + (quiz.codeCompletionQuestions?.length || 0))} soru
+                        </span>
+                        <span className="quiz-score">
+                          <span role="img" aria-label="puan">🎯</span> Geçme Puanı: {quiz.passingScore || 0}
+                        </span>
+                      </div>
+                      <button className="quiz-start-button">
+                        Quizi Başlat
+                      </button>
                     </div>
-                    <p className="quiz-description">{quiz.description}</p>
-                    <div className="quiz-details">
-                      <span className="quiz-time">
-                        <span role="img" aria-label="saat">⏱️</span> {quiz.timeLimit || 0} dakika
-                      </span>
-                      <span className="quiz-questions">
-                        <span role="img" aria-label="soru">❓</span> {((quiz.multipleChoiceQuestions?.length || 0) + (quiz.codeCompletionQuestions?.length || 0))} soru
-                      </span>
-                      <span className="quiz-score">
-                        <span role="img" aria-label="puan">🎯</span> Geçme Puanı: {quiz.passingScore || 0}
-                      </span>
-                    </div>
-                    <button className="quiz-start-button">
-                      Quizi Başlat
-                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Login overlay for non-logged in users */}
+              {!isLoggedIn && (
+                <div className="quiz-login-overlay">
+                  <div className="quiz-login-message">
+                    <h3>Giriş Gerekiyor</h3>
+                    <p>Quizleri görmek ve çözmek için lütfen giriş yapın.</p>
+                    <Link to="/login" className="login-button">
+                      Giriş Yap
+                    </Link>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </section>
         </div>
       </div>
