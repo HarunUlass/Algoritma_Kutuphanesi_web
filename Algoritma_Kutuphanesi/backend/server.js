@@ -35,6 +35,7 @@ const QuizAttempt = require('./models/QuizAttempt');
 const UserProgress = require('./models/UserProgress');
 const LearningPath = require('./models/LearningPath');
 const { Badge, initializeBadges } = require('./models/Badge');
+const ViewedAlgorithm = require('./models/ViewedAlgorithm');
 
 // Veritabanı başlatma fonksiyonu
 async function initializeData() {
@@ -289,7 +290,8 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       message: 'Kullanıcı başarıyla kaydedildi',
-      username: user.username
+      username: user.username,
+      id: user._id
     });
   } catch (error) {
     console.error('Kayıt hatası:', error);
@@ -318,7 +320,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({
       message: 'Giriş başarılı',
-      username: user.username
+      username: user.username,
+      id: user._id
     });
   } catch (error) {
     console.error('Giriş hatası:', error);
@@ -606,7 +609,36 @@ app.get('/api/algorithms/:algorithmId/quizzes', async (req, res) => {
   }
 });
 
-// Parametreli routelar en son tanımlanmalı
+// Algoritma ID'ye göre getir
+app.get('/api/algorithms/id/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // MongoDB ObjectId formatını kontrol et
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: 'Geçersiz algoritma ID formatı'
+      });
+    }
+    
+    // ID'ye göre algoritma ara
+    const algorithm = await Algorithm.findById(id);
+    
+    if (!algorithm) {
+      return res.status(404).json({
+        error: `ID: ${id} ile algoritma bulunamadı`
+      });
+    }
+    
+    res.json(algorithm);
+  } catch (error) {
+    console.error('Algoritma ID ile arama hatası:', error);
+    res.status(500).json({
+      error: 'Algoritma aranırken bir hata oluştu'
+    });
+  }
+});
+
 app.get('/api/algorithms/:title', async (req, res) => {
   try {
     const title = req.params.title;
@@ -617,7 +649,7 @@ app.get('/api/algorithms/:title', async (req, res) => {
     console.log('Veritabanındaki algoritmalar:', allAlgos.map(algo => algo.title));
     
     // Algoritma başlığı birebir eşleşme yerine case-insensitive arama yap
-    const algorithm = await Algorithm.findOne({ 
+    const algorithm = await Algorithm.findOne({
       title: { $regex: new RegExp(`^${title.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } 
     });
     
@@ -1328,124 +1360,80 @@ app.post('/api/users/:userId/algo-viewed/:algorithmId', async (req, res) => {
   try {
     const { userId, algorithmId } = req.params;
     
-    // Kullanıcının ve algoritmanın var olup olmadığını kontrol et
-    const [user, algorithm] = await Promise.all([
-      User.findById(userId),
-      Algorithm.findById(algorithmId)
-    ]);
+    console.log(`Algoritma görüntüleme isteği: userId=${userId}, algorithmId=${algorithmId}`);
     
+    // Kullanıcı ve algoritmanın varlığını kontrol et
+    // ObjectId dönüşüm hatasını önlemek için findById yerine findOne kullan
+    const user = await User.findOne({ _id: userId }).catch(() => null);
     if (!user) {
-      return res.status(404).json({
-        error: 'Kullanıcı bulunamadı'
-      });
+      console.log(`Kullanıcı bulunamadı: ${userId}`);
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Algoritma ID'si için güvenlik kontrolü
+    let algorithm;
+    try {
+      // Önce gelen ID ile direkt olarak arama yap
+      algorithm = await Algorithm.findOne({ _id: algorithmId }).catch(() => null);
+      
+      // Eğer bulunamadıysa arama kriterlerini esnetelim
+      if (!algorithm) {
+        console.log(`Algoritma ilk sorguda bulunamadı, alternatif sorgu deneniyor...`);
+        
+        // Başlıkla arama yapmayı deneyelim
+        algorithm = await Algorithm.findOne({ 
+          $or: [
+            { title: { $regex: new RegExp(`^${algorithmId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } },
+            { _id: algorithmId }
+          ]
+        });
+      }
+    } catch (err) {
+      console.error(`Algoritma sorgusu hatası:`, err);
+      return res.status(400).json({ error: 'Geçersiz algoritma ID formatı veya sorgu hatası' });
     }
     
     if (!algorithm) {
-      return res.status(404).json({
-        error: 'Algoritma bulunamadı'
-      });
+      console.log(`Algoritma bulunamadı: ${algorithmId}`);
+      return res.status(404).json({ error: 'Algoritma bulunamadı' });
     }
     
-    // Kullanıcının ilerleme bilgisini getir, yoksa oluştur
+    console.log(`Algoritma bulundu: ${algorithm.title}, ID: ${algorithm._id}`);
+    
+    // İlerleme kaydını güncelle
     let userProgress = await UserProgress.findOne({ userId });
     
     if (!userProgress) {
+      // Kullanıcı ilerlemesi henüz oluşturulmamışsa, yeni bir tane oluştur
       userProgress = new UserProgress({ userId });
+      await userProgress.save();
     }
     
-    // Algoritma ilerlemesini güncelle
-    const algorithmIdStr = algorithmId.toString();
-    const isFirstView = !userProgress.algorithmProgress.has(algorithmIdStr);
-    const existingProgress = userProgress.algorithmProgress.get(algorithmIdStr) || {
-      algorithmId,
-      viewCount: 0,
+    // Algoritma ilerleme kaydını güncelle - algorithm._id.toString() kullan
+    userProgress.updateAlgorithmProgress(algorithm._id.toString(), { 
       lastViewed: new Date(),
-      completed: false
-    };
-    
-    // Görüntüleme sayısını artır
-    existingProgress.viewCount = (existingProgress.viewCount || 0) + 1;
-    existingProgress.lastViewed = new Date();
-    
-    userProgress.algorithmProgress.set(algorithmIdStr, existingProgress);
-    
-    // İlk kez görüntüleme ise LEARNER rozeti ve XP ver
-    let achievements = [];
-    let xpUpdate = { gained: 0, levelUp: false };
-    
-    if (isFirstView) {
-      // İlk kez bir algoritma görüntülemeye XP ver
-      xpUpdate = userProgress.addXP(10);
-      
-      // İlk algoritma görüntülemesi için rozet kontrolü yap
-      const learnerBadge = await Badge.findOne({ type: 'LEARNER' });
-      
-      if (learnerBadge && !userProgress.achievements.some(a => a.type === 'LEARNER')) {
-        const badgeAdded = userProgress.addAchievement({
-          type: 'LEARNER',
-          name: learnerBadge.name,
-          description: learnerBadge.description,
-          icon: learnerBadge.icon,
-          relatedEntity: algorithmId,
-          relatedEntityModel: 'Algorithm'
-        });
-        
-        if (badgeAdded) {
-          // Rozet XP'si ekle
-          xpUpdate = userProgress.addXP(learnerBadge.xpReward);
-          achievements.push({
-            type: 'LEARNER',
-            name: learnerBadge.name,
-            icon: learnerBadge.icon,
-            xpReward: learnerBadge.xpReward
-          });
-        }
-      }
-      
-      // Streak güncelle (günlük çalışma serisi)
-      userProgress.updateStreak();
-      
-      // STREAK_HERO rozeti kontrolü
-      const streakBadge = await Badge.findOne({ 
-        type: 'STREAK_HERO',
-        'requirement.streakDays': { $lte: userProgress.streakDays }
-      });
-      
-      if (streakBadge && !userProgress.achievements.some(a => a.type === 'STREAK_HERO')) {
-        const badgeAdded = userProgress.addAchievement({
-          type: 'STREAK_HERO',
-          name: streakBadge.name,
-          description: streakBadge.description,
-          icon: streakBadge.icon
-        });
-        
-        if (badgeAdded) {
-          xpUpdate = userProgress.addXP(streakBadge.xpReward);
-          achievements.push({
-            type: 'STREAK_HERO',
-            name: streakBadge.name,
-            icon: streakBadge.icon,
-            xpReward: streakBadge.xpReward
-          });
-        }
-      }
-    }
+      viewCount: 1  // viewCount değeri otomatik olarak artırılır
+    });
     
     await userProgress.save();
     
-    // Güncellenmiş ilerleme bilgisini döndür
-    res.json({
-      progress: {
-        viewCount: existingProgress.viewCount,
-        lastViewed: existingProgress.lastViewed
-      },
-      xpUpdate,
-      achievements
+    // Görüntülenme kaydını da ViewedAlgorithm koleksiyonuna ekle
+    await ViewedAlgorithm.recordView(userId, {
+      _id: algorithm._id,
+      title: algorithm.title,
+      description: algorithm.description,
+      complexity: algorithm.complexity?.time?.average || algorithm.complexity?.time?.worst || 'O(?)',
+      difficulty: req.body.difficulty || 'Orta'
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Algoritma görüntüleme kaydedildi'
     });
   } catch (error) {
-    console.error('Algoritma görüntüleme kaydı hatası:', error);
+    console.error('Algoritma görüntüleme hatası:', error);
     res.status(500).json({
-      error: 'Algoritma görüntüleme kaydı yapılırken bir hata oluştu'
+      error: 'Algoritma görüntüleme kaydedilirken bir hata oluştu'
     });
   }
 });
@@ -2116,6 +2104,273 @@ app.get('/api/users/:userId/notes', async (req, res) => {
       error: 'Tüm notları getirirken bir hata oluştu'
     });
   }
+});
+
+// Belirli bir quiz girişimini getir
+app.get('/api/quiz-attempts/:attemptId', async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    
+    // Geçici ID kontrolü (misafir kullanıcı için)
+    if (attemptId.startsWith('temp_') || attemptId.startsWith('fallback_')) {
+      return res.status(404).json({
+        error: 'Geçici quiz girişimleri kaydedilmez ve daha sonra getirilemez'
+      });
+    }
+    
+    // Girişimi bul
+    let attempt;
+    try {
+      attempt = await QuizAttempt.findById(attemptId)
+        .populate({
+          path: 'quizId',
+          select: 'title totalPoints passingScore multipleChoiceQuestions codeCompletionQuestions',
+          populate: {
+            path: 'algorithmId',
+            select: 'title'
+          }
+        });
+    } catch (err) {
+      console.error(`Geçersiz Attempt ID formatı: ${err}`);
+      return res.status(400).json({
+        error: 'Geçersiz Quiz Girişimi ID formatı'
+      });
+    }
+    
+    if (!attempt) {
+      return res.status(404).json({
+        error: 'Quiz girişimi bulunamadı'
+      });
+    }
+    
+    // Döndürülecek veriyi hazırla (cevaplar, skor, geçme durumu vb.)
+    const responseData = {
+      _id: attempt._id,
+      userId: attempt.userId,
+      quizId: attempt.quizId._id,
+      quizTitle: attempt.quizId.title,
+      algorithmId: attempt.quizId.algorithmId ? attempt.quizId.algorithmId._id : null,
+      algorithmTitle: attempt.quizId.algorithmId ? attempt.quizId.algorithmId.title : null,
+      startTime: attempt.startTime,
+      endTime: attempt.endTime,
+      completed: attempt.completed,
+      score: attempt.score,
+      totalPossible: attempt.quizId.totalPoints,
+      passed: attempt.passed,
+      multipleChoiceAnswers: attempt.multipleChoiceAnswers,
+      codeCompletionAnswers: attempt.codeCompletionAnswers
+    };
+    
+    res.json(responseData);
+  } catch (error) {
+    console.error('Quiz girişimi getirme hatası:', error);
+    res.status(500).json({
+      error: 'Quiz girişimini getirirken bir hata oluştu'
+    });
+  }
+});
+
+// Kullanıcı bilgilerini güncelleme
+app.put('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { username, email, password, currentPassword } = req.body;
+
+    // userId'nin geçerli bir ObjectId olup olmadığını kontrol et
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        error: 'Geçersiz kullanıcı ID formatı'
+      });
+    }
+
+    // Kullanıcıyı bul
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'Kullanıcı bulunamadı'
+      });
+    }
+    
+    // Mevcut şifre kontrolü
+    if (currentPassword && !user.comparePassword(currentPassword)) {
+      return res.status(401).json({
+        error: 'Mevcut şifre hatalı'
+      });
+    }
+    
+    // Email güncellenmek isteniyorsa, başka bir kullanıcı tarafından kullanılıyor mu kontrol et
+    if (email && email !== user.email) {
+      const existingUserWithEmail = await User.findOne({ email });
+      if (existingUserWithEmail) {
+        return res.status(400).json({
+          error: 'Bu email adresi başka bir kullanıcı tarafından kullanılıyor'
+        });
+      }
+      user.email = email;
+    }
+    
+    // Kullanıcı adı güncellenmek isteniyorsa, başka bir kullanıcı tarafından kullanılıyor mu kontrol et
+    if (username && username !== user.username) {
+      const existingUserWithUsername = await User.findOne({ username });
+      if (existingUserWithUsername) {
+        return res.status(400).json({
+          error: 'Bu kullanıcı adı başka bir kullanıcı tarafından kullanılıyor'
+        });
+      }
+      user.username = username;
+    }
+    
+    // Şifre güncelleme
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({
+          error: 'Şifre en az 6 karakter olmalıdır'
+        });
+      }
+      user.password = password;
+    }
+    
+    // Kullanıcıyı kaydet
+    await user.save();
+    
+    res.json({
+      message: 'Kullanıcı bilgileri başarıyla güncellendi',
+      username: user.username,
+      email: user.email
+    });
+  } catch (error) {
+    console.error('Kullanıcı güncelleme hatası:', error);
+    res.status(500).json({
+      error: 'Kullanıcı bilgileri güncellenirken bir hata oluştu'
+    });
+  }
+});
+
+// Kullanıcı bilgilerini getir
+app.get('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // userId'nin geçerli bir ObjectId olup olmadığını kontrol et
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        error: 'Geçersiz kullanıcı ID formatı'
+      });
+    }
+    
+    // Kullanıcıyı bul
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'Kullanıcı bulunamadı'
+      });
+    }
+    
+    // Şifre bilgisini filtreleyerek kullanıcı bilgilerini gönder
+    res.json({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    console.error('Kullanıcı bilgileri getirme hatası:', error);
+    res.status(500).json({
+      error: 'Kullanıcı bilgileri alınırken bir hata oluştu'
+    });
+  }
+});
+
+// Email'e göre kullanıcı bilgilerini getir (oturum işlemleri için)
+app.get('/api/users/by-email/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    // Email'e göre kullanıcıyı bul
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'Kullanıcı bulunamadı'
+      });
+    }
+    
+    // Şifre bilgisini filtreleyerek kullanıcı bilgilerini gönder
+    res.json({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    console.error('Email ile kullanıcı bilgileri getirme hatası:', error);
+    res.status(500).json({
+      error: 'Kullanıcı bilgileri alınırken bir hata oluştu'
+    });
+  }
+});
+
+// Kullanıcının son görüntülediği algoritmaları getir
+app.get('/api/users/:userId/recently-viewed-algorithms', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const limit = parseInt(req.query.limit) || 5;
+    
+    // Kullanıcının varlığını kontrol et
+    // ObjectId dönüşüm hatasını önlemek için findById yerine findOne kullan
+    const user = await User.findOne({ _id: userId }).catch(() => null);
+    if (!user) {
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Son görüntülenen algoritmaları getir
+    const viewedAlgorithms = await ViewedAlgorithm.getRecentlyViewed(userId, limit);
+    
+    // Algoritma verilerini uygun formata dönüştür
+    const formattedAlgorithms = viewedAlgorithms.map(record => ({
+      id: record.algorithmId._id,
+      title: record.title,
+      description: record.description || '',
+      complexity: record.complexity || 'O(?)',
+      difficulty: record.difficulty || 'Orta',
+      lastViewed: record.lastViewed,
+      viewCount: record.viewCount,
+      url: `/algorithm/${record.algorithmId._id}`
+    }));
+    
+    res.json(formattedAlgorithms);
+  } catch (error) {
+    console.error('Son görüntülenen algoritmaları getirme hatası:', error);
+    res.status(500).json({
+      error: 'Son görüntülenen algoritmaları getirirken bir hata oluştu'
+    });
+  }
+});
+
+// Belirli bir geçersiz rota için 404 işleyici
+app.use('/api/*', (req, res, next) => {
+  console.log(`API 404 hatası: ${req.method} ${req.url}`);
+  res.status(404).json({
+    error: 'API rotası bulunamadı',
+    method: req.method,
+    path: req.url,
+    message: 'Bu API endpointi sistemde mevcut değil veya erişiminiz yok.'
+  });
+});
+
+// Genel hata işleyici middleware
+app.use((err, req, res, next) => {
+  console.error('Genel sunucu hatası:', err);
+  
+  // Hata response'unu ayarla
+  res.status(err.status || 500).json({
+    error: 'Sunucu hatası',
+    message: err.message || 'Beklenmeyen bir sunucu hatası oluştu',
+    path: req.url,
+    method: req.method
+  });
 });
 
 // Server'ı başlat

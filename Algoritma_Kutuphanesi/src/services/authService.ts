@@ -54,7 +54,7 @@ export const registerUser = async (userData: Partial<IUser>): Promise<Partial<IU
 };
 
 // Kullanıcı girişi - server.js'deki login endpointini kullanır
-export const loginUser = async (email: string, password: string): Promise<{ user: Partial<IUser>, token: string } | null> => {
+export const loginUser = async (email: string, password: string): Promise<any> => {
   try {
     console.log('Kullanıcı girişi yapılıyor:', email);
     
@@ -62,12 +62,9 @@ export const loginUser = async (email: string, password: string): Promise<{ user
     if (email === TEST_USER.email && password === TEST_USER.password) {
       console.log('Test kullanıcısı girişi yapılıyor...');
       return {
-        user: {
-          _id: TEST_USER._id,
-          email: TEST_USER.email,
-          username: TEST_USER.username
-        },
-        token: 'test_token_123'
+        username: TEST_USER.username,
+        id: TEST_USER._id,
+        message: 'Giriş başarılı'
       };
     }
     
@@ -77,15 +74,8 @@ export const loginUser = async (email: string, password: string): Promise<{ user
     
     console.log('Giriş cevabı:', response);
     
-    // server.js'den dönen yanıt: { message: 'Giriş başarılı', username: user.username }
-    return {
-      user: {
-        _id: `user_${Date.now()}`, // Backend _id dönmüyor, geçici oluşturuyoruz
-        email: email,
-        username: response.username
-      },
-      token: `auth_token_${Date.now()}` // Backend token dönmüyor, geçici oluşturuyoruz
-    };
+    // Server yanıtını direkt döndür, dönüşüm yapma
+    return response;
   } catch (error: any) {
     console.error('Kullanıcı girişi sırasında hata:', error.message);
     
@@ -93,12 +83,9 @@ export const loginUser = async (email: string, password: string): Promise<{ user
     if (email === TEST_USER.email && password === TEST_USER.password) {
       console.log('Backend çalışmıyor, test kullanıcısı ile devam ediliyor');
       return {
-        user: {
-          _id: TEST_USER._id,
-          email: TEST_USER.email,
-          username: TEST_USER.username
-        },
-        token: 'test_token_fallback'
+        username: TEST_USER.username,
+        id: TEST_USER._id,
+        message: 'Giriş başarılı'
       };
     }
     

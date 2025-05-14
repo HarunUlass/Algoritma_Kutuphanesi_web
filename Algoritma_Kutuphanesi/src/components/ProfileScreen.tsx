@@ -20,14 +20,6 @@ interface RecentActivity {
   link: string;
 }
 
-interface FavoriteItem {
-  id: string;
-  title: string;
-  icon: string;
-  description: string;
-  link: string;
-}
-
 interface Badge {
   type: string;
   name: string;
@@ -170,35 +162,10 @@ const ProfileScreen: React.FC = () => {
     {
       id: '4',
       title: 'Dijkstra Algoritması',
-      icon: '��',
+      icon: '🔍',
       date: '24/03/2025',
       type: 'algoritma',
       link: '/algorithms/detail/4'
-    }
-  ];
-
-  // Örnek favori verileri
-  const favorites: FavoriteItem[] = [
-    {
-      id: '1',
-      title: 'Binary Search',
-      icon: '🔍',
-      description: 'O(log n) karmaşıklığında arama algoritması',
-      link: '/algorithms/detail/1'
-    },
-    {
-      id: '2',
-      title: 'Merge Sort',
-      icon: '🔄',
-      description: 'O(n log n) karmaşıklığında sıralama algoritması',
-      link: '/algorithms/detail/2'
-    },
-    {
-      id: '3',
-      title: 'Yapay Sinir Ağları',
-      icon: '🧠',
-      description: 'Derin öğrenme temel mimarisi',
-      link: '/algorithms/detail/3'
     }
   ];
 
@@ -233,6 +200,13 @@ const ProfileScreen: React.FC = () => {
       window.removeEventListener('algorithmViewed', handleAlgorithmView as any);
     };
   }, [navigate]);
+
+  // activeTab 'recents' olduğunda son görüntülenen algoritmaları yükle
+  useEffect(() => {
+    if (activeTab === 'recents') {
+      fetchRecentAlgorithms();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     // Kullanıcı rozetlerini getir
@@ -341,58 +315,54 @@ const ProfileScreen: React.FC = () => {
   // Son görüntülenen algoritmaları getiren fonksiyon
   const fetchRecentAlgorithms = async () => {
     try {
-      // localStorage'dan son görüntülenen algoritmaları al
-      const sessionAlgorithms = sessionStorage.getItem('viewedAlgorithms');
-      const localAlgorithms = localStorage.getItem('viewedAlgorithms');
+      setLoading(true);
       
-      // Önce mevcut oturumdaki algoritmalara bak
-      if (sessionAlgorithms) {
-        try {
-          const parsedAlgorithms: ViewedAlgorithm[] = JSON.parse(sessionAlgorithms);
-          
-          if (parsedAlgorithms && parsedAlgorithms.length > 0) {
-            // En son görüntülenenleri başa alarak ve en fazla 5 adet göstererek set et
-            setRecentAlgorithms(
-              parsedAlgorithms
-                .sort((a, b) => new Date(b.lastViewed).getTime() - new Date(a.lastViewed).getTime())
-                .slice(0, 5)
-            );
-            return; // Algoritma bulunduğunda çık
-          }
-        } catch (parseError) {
-          console.error('Kaydedilen algoritma verilerini işlerken hata oluştu:', parseError);
-          sessionStorage.removeItem('viewedAlgorithms'); // Bozuk veriyi temizle
-        }
+      // Kullanıcı ID'sini localStorage'dan al
+      const userId = localStorage.getItem('userId');
+      
+      console.log('fetchRecentAlgorithms - userId from localStorage:', userId);
+      
+      if (!userId) {
+        console.error('Kullanıcı ID\'si bulunamadı');
+        setRecentAlgorithms([]);
+        setLoading(false);
+        return;
       }
       
-      // Mevcut oturumda yoksa, kalıcı depolamaya bak
-      if (localAlgorithms) {
-        try {
-          const parsedAlgorithms: ViewedAlgorithm[] = JSON.parse(localAlgorithms);
-          
-          if (parsedAlgorithms && parsedAlgorithms.length > 0) {
-            // Kalıcı depodaki verileri oturum deposuna kopyala
-            sessionStorage.setItem('viewedAlgorithms', localAlgorithms);
-            
-            // En son görüntülenenleri başa alarak ve en fazla 5 adet göstererek set et
-            setRecentAlgorithms(
-              parsedAlgorithms
-                .sort((a, b) => new Date(b.lastViewed).getTime() - new Date(a.lastViewed).getTime())
-                .slice(0, 5)
-            );
-            return;
-          }
-        } catch (parseError) {
-          console.error('Kaydedilen algoritma verilerini işlerken hata oluştu:', parseError);
-          localStorage.removeItem('viewedAlgorithms'); // Bozuk veriyi temizle
-        }
+      // userId'den "user_" önekini kaldır (eğer varsa)
+      const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
+      console.log('fetchRecentAlgorithms - kullanılan temiz userId:', cleanUserId);
+      
+      // API'den son görüntülenen algoritmaları getir
+      const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/recently-viewed-algorithms?limit=5`;
+      console.log('fetchRecentAlgorithms - API çağrısı:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        console.error(`HTTP Hata: ${response.status} - ${await response.text()}`);
+        throw new Error(`HTTP Hata: ${response.status}`);
       }
       
-      // Hiç veri bulunamadıysa boş dizi göster
-      setRecentAlgorithms([]);
+      const data = await response.json();
+      console.log('fetchRecentAlgorithms - API yanıtı:', data);
+      
+      if (Array.isArray(data)) {
+        // URL'leri düzelt - doğru format '/#/algorithm/algo_title' olmalı
+        const formattedData = data.map(algo => ({
+          ...algo,
+          url: `/#/algorithm/${encodeURIComponent(algo.title || algo.id)}`
+        }));
+        setRecentAlgorithms(formattedData);
+      } else {
+        console.error('API beklenen formatta veri döndürmedi', data);
+        setRecentAlgorithms([]);
+      }
     } catch (error) {
-      console.error('Son görüntülenen algoritmalar alınırken hata oluştu:', error);
+      console.error('Son görüntülenen algoritmaları getirme hatası:', error);
       setRecentAlgorithms([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -406,7 +376,61 @@ const ProfileScreen: React.FC = () => {
       return;
     }
     
-    // Yeni algoritma görüntüleme kaydı oluştur
+    // Kullanıcı ID'sini localStorage'dan al
+    const userId = localStorage.getItem('userId');
+    console.log('handleAlgorithmView - localStorage userId:', userId);
+    
+    if (!userId) {
+      console.warn('Kullanıcı ID\'si bulunamadı, görüntüleme kaydedilemiyor');
+      return;
+    }
+    
+    // userId'den "user_" önekini kaldır (eğer varsa)
+    const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
+    console.log('handleAlgorithmView - kullanılan temiz userId:', cleanUserId);
+    console.log('handleAlgorithmView - algoritma id:', algorithm.id);
+    
+    // API'ye görüntüleme kaydı gönder
+    const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/algo-viewed/${algorithm.id}`;
+    console.log('handleAlgorithmView - API çağrısı:', apiUrl);
+    
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        difficulty: algorithm.difficulty || 'Orta'
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          console.error(`HTTP Hata: ${response.status} - ${text}`);
+          throw new Error(`HTTP Hata: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Algoritma görüntüleme kaydedildi:', data);
+      
+      // Profil sayfasında görüntüleniyorsa, listeyi güncelle
+      if (activeTab === 'recents') {
+        fetchRecentAlgorithms();
+      }
+    })
+    .catch(error => {
+      console.error('Algoritma görüntüleme kaydedilemedi:', error);
+    });
+    
+    // Ayrıca yerel depolama için yeni algoritma görüntüleme kaydı oluştur 
+    // (API çağrısı başarısız olursa yedek olarak)
+    updateLocalStorage(algorithm);
+  };
+  
+  // Yerel depolama güncelleme fonksiyonu
+  const updateLocalStorage = (algorithm: any) => {
     const viewedAlgo: ViewedAlgorithm = {
       id: algorithm.id,
       title: algorithm.title || 'Bilinmeyen Algoritma',
@@ -415,15 +439,13 @@ const ProfileScreen: React.FC = () => {
       difficulty: algorithm.difficulty || 'Orta',
       lastViewed: new Date().toISOString(),
       viewCount: 1,
-      url: algorithm.url || `/algorithms/detail/${algorithm.id}`
+      url: algorithm.url || `/#/algorithm/${encodeURIComponent(algorithm.title || algorithm.id)}`
     };
     
     // localStorage ve sessionStorage'dan mevcut verileri al
     let sessionAlgos: ViewedAlgorithm[] = [];
-    let localAlgos: ViewedAlgorithm[] = [];
     
     const sessionStored = sessionStorage.getItem('viewedAlgorithms');
-    const localStored = localStorage.getItem('viewedAlgorithms');
     
     // Session verileri
     if (sessionStored) {
@@ -446,35 +468,8 @@ const ProfileScreen: React.FC = () => {
       sessionAlgos = [viewedAlgo];
     }
     
-    // Local verileri
-    if (localStored) {
-      try {
-        localAlgos = JSON.parse(localStored);
-        
-        // Eğer algoritma daha önce görüntülenmişse, güncelle
-        const index = localAlgos.findIndex(a => a.id === viewedAlgo.id);
-        if (index >= 0) {
-          viewedAlgo.viewCount = localAlgos[index].viewCount + 1;
-          localAlgos[index] = viewedAlgo;
-        } else {
-          localAlgos.push(viewedAlgo);
-        }
-      } catch (error) {
-        console.error('Local veri bozuk, sıfırlanıyor');
-        localAlgos = [viewedAlgo];
-      }
-    } else {
-      localAlgos = [viewedAlgo];
-    }
-    
     // Güncellenmiş verileri kaydet
     sessionStorage.setItem('viewedAlgorithms', JSON.stringify(sessionAlgos));
-    localStorage.setItem('viewedAlgorithms', JSON.stringify(localAlgos));
-    
-    // Son görüntülenenleri yeniden yükle
-    fetchRecentAlgorithms();
-    
-    console.log(`"${viewedAlgo.title}" algoritması görüntülendi ve kaydedildi.`);
   };
 
   // Tarih formatını düzenleyen yardımcı fonksiyon
@@ -524,6 +519,14 @@ const ProfileScreen: React.FC = () => {
 
   // Son görüntülenenleri temizle
   const clearRecentAlgorithms = () => {
+    const userId = localStorage.getItem('userId');
+    
+    if (userId) {
+      // Gerçek bir API uç noktası olsaydı burada sunucudaki kayıtları temizleme isteği yapardık
+      // Şimdilik sadece yerel kayıtları temizliyoruz
+      alert('Son görüntülenen algoritmalar temizlendi');
+    }
+    
     sessionStorage.removeItem('viewedAlgorithms');
     localStorage.removeItem('viewedAlgorithms');
     setRecentAlgorithms([]);
@@ -639,19 +642,25 @@ const ProfileScreen: React.FC = () => {
       case 'recents':
         return (
           <div className="profile-recents-container">
+            <h2 className="section-title">Son Görüntülenen Algoritmalar</h2>
             <div className="recents-header">
-              <h2 className="section-title">Son Görüntülenen Algoritmalar</h2>
+              <div className="recents-info">
+                <span>Gezdiğiniz algoritmaların kaydı otomatik olarak tutulur</span>
+              </div>
               {recentAlgorithms.length > 0 && (
-                <button 
-                  className="clear-recents-button"
-                  onClick={clearRecentAlgorithms}
-                >
-                  Temizle
+                <button onClick={clearRecentAlgorithms} className="clear-button">
+                  <span className="clear-icon">🗑️</span>
+                  <span className="clear-text">Temizle</span>
                 </button>
               )}
             </div>
             
-            {recentAlgorithms.length === 0 ? (
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <div className="loading-text">Yükleniyor...</div>
+              </div>
+            ) : recentAlgorithms.length === 0 ? (
               <div className="recents-empty">
                 <div className="empty-icon">🔍</div>
                 <div className="empty-message">Henüz hiç algoritma görüntülemediniz</div>
@@ -661,16 +670,20 @@ const ProfileScreen: React.FC = () => {
             ) : (
               <div className="recents-list">
                 {recentAlgorithms.map(algorithm => (
-                  <Link to={algorithm.url} className="recent-item" key={algorithm.id}>
+                  <Link 
+                    to={algorithm.url.replace('/#', '')} 
+                    className="recent-item" 
+                    key={algorithm.id}
+                  >
                     <div className="recent-item-icon">
                       {algorithm.difficulty === 'Kolay' ? '🟢' : 
                        algorithm.difficulty === 'Orta' ? '🟠' : '🔴'}
                     </div>
                     <div className="recent-item-details">
-                      <div className="recent-item-title">{algorithm.title}</div>
-                      <div className="recent-item-description">{algorithm.description}</div>
+                      <div className="recent-item-title">{algorithm.title || `Algoritma ${algorithm.id}`}</div>
+                      <div className="recent-item-description">{algorithm.description || 'Açıklama mevcut değil'}</div>
                       <div className="recent-item-meta">
-                        <span className="recent-complexity">{algorithm.complexity}</span>
+                        <span className="recent-complexity">{algorithm.complexity || 'O(?)'}</span>
                         <span className="recent-time">{formatDate(algorithm.lastViewed)}</span>
                         <span className="view-count">{algorithm.viewCount} kez görüntülendi</span>
                       </div>
@@ -679,23 +692,6 @@ const ProfileScreen: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
-        );
-      case 'favorites':
-        return (
-          <div className="profile-favorites-container">
-            <h2 className="section-title">Favoriler</h2>
-            <div className="favorites-list">
-              {favorites.map(item => (
-                <Link to={item.link} className="favorite-item" key={item.id}>
-                  <div className="favorite-item-icon">{item.icon}</div>
-                  <div className="favorite-item-details">
-                    <div className="favorite-item-title">{item.title}</div>
-                    <div className="favorite-item-description">{item.description}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
           </div>
         );
       case 'badges':
@@ -840,13 +836,6 @@ const ProfileScreen: React.FC = () => {
         >
           <span className="tab-icon">🕒</span>
           <span className="tab-label">Son Görüntülenenler</span>
-        </button>
-        <button 
-          className={`profile-tab ${activeTab === 'favorites' ? 'active' : ''}`}
-          onClick={() => setActiveTab('favorites')}
-        >
-          <span className="tab-icon">🔖</span>
-          <span className="tab-label">Favoriler</span>
         </button>
         <button 
           className={`profile-tab ${activeTab === 'badges' ? 'active' : ''}`}

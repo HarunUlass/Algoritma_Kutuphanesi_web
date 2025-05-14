@@ -41,8 +41,11 @@ async function fetchApi(
 // API endpoint'leri
 export const api = {
   auth: {
-    login: (email: string, password: string) => 
-      fetchApi('/auth/login', 'POST', { email, password }),
+    login: async (email: string, password: string) => {
+      const result = await fetchApi('/auth/login', 'POST', { email, password });
+      console.log('Login API yanıtı:', result);
+      return result; // Doğrudan backend'den gelen yanıtı döndür
+    },
     register: (userData: any) => 
       fetchApi('/auth/register', 'POST', userData)
   },

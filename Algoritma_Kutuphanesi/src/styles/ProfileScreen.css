@@ -178,62 +178,72 @@
 
 /* Recents Tab */
 .profile-recents-container {
-  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
 }
 
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #FF6F00;
+.recents-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+}
+
+.recents-info {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.clear-button {
   display: flex;
   align-items: center;
-  position: relative;
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: background-color 0.2s;
 }
 
-.section-title::before {
-  content: '';
-  width: 4px;
-  height: 20px;
-  background-color: #FF8C00;
-  border-radius: 2px;
-  margin-right: 10px;
+.clear-button:hover {
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+.clear-icon {
+  margin-right: 5px;
 }
 
 .recents-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .recent-item {
-  background-color: white;
-  border-radius: 12px;
-  padding: 15px;
   display: flex;
-  align-items: flex-start;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
   text-decoration: none;
   color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .recent-item:hover {
-  transform: translateX(5px);
+  transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .recent-item-icon {
-  width: 40px;
-  height: 40px;
-  background-color: rgba(255, 140, 0, 0.1);
-  border-radius: 50%;
+  margin-right: 15px;
+  font-size: 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-right: 15px;
-  flex-shrink: 0;
 }
 
 .recent-item-details {
@@ -241,99 +251,110 @@
 }
 
 .recent-item-title {
-  font-size: 16px;
   font-weight: 600;
-  color: #333;
+  font-size: 1.1rem;
   margin-bottom: 5px;
+  color: #2c3e50;
 }
 
 .recent-item-description {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  margin-bottom: 10px;
   line-height: 1.4;
 }
 
 .recent-item-meta {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 12px;
-  color: #888;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #95a5a6;
 }
 
 .recent-complexity {
-  padding: 3px 8px;
-  background-color: rgba(0, 0, 255, 0.1);
-  border-radius: 10px;
-  color: #4040C0;
-  font-weight: 500;
+  padding: 2px 6px;
+  background-color: #e7f5fe;
+  color: #3498db;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 .recent-time {
-  color: #888;
-  font-style: italic;
+  color: #7f8c8d;
 }
 
 .view-count {
-  padding: 2px 6px;
-  background-color: rgba(255, 140, 0, 0.1);
-  border-radius: 10px;
-  color: #FF8C00;
-  font-weight: 500;
+  color: #27ae60;
 }
 
-/* Boş durumu için stiller */
 .recents-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #7f8c8d;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+.empty-message {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-bottom: 10px;
+  color: #34495e;
+}
+
+.empty-suggestion {
+  margin-bottom: 20px;
+  color: #7f8c8d;
+}
+
+.explore-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border-radius: 20px;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+.explore-button:hover {
+  background-color: #2980b9;
+}
+
+/* Yükleme animasyonu */
+.loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  background-color: white;
-  border-radius: 15px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-  text-align: center;
+  padding: 40px 0;
+  color: #7f8c8d;
 }
 
-.empty-icon {
-  font-size: 48px;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #3498db;
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
   margin-bottom: 15px;
-  opacity: 0.7;
 }
 
-.empty-message {
-  font-size: 18px;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 10px;
+.loading-text {
+  font-size: 1rem;
+  color: #7f8c8d;
 }
 
-.empty-suggestion {
-  font-size: 14px;
-  color: #777;
-  max-width: 300px;
-  line-height: 1.4;
-  margin-bottom: 20px;
-}
-
-.explore-button {
-  background-color: #FF8C00;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-}
-
-.explore-button:hover {
-  background-color: #FF6F00;
-  transform: translateY(-2px);
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Badges Tab */
@@ -822,34 +843,4 @@
 
 .test-button:hover {
   background-color: #e0e0e0;
-}
-
-/* Son Görüntülenenler Başlık */
-.recents-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.clear-recents-button {
-  background-color: #f8f9fa;
-  color: #6c757d;
-  border: 1px solid #dee2e6;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clear-recents-button:hover {
-  background-color: #e9ecef;
-  color: #495057;
-  border-color: #ced4da;
-}
-
-.clear-recents-button:active {
-  background-color: #dee2e6;
-  color: #343a40;
 } 

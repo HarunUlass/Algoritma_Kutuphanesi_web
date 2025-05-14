@@ -113,24 +113,82 @@ const AlgorithmDetailScreen: React.FC<AlgorithmDetailScreenProps> = () => {
   
   // Algoritma görüntüleme kaydı oluştur
   const recordAlgorithmView = (algorithm: Algorithm) => {
-    // Algoritma görüntüleme bilgileri
+    // Görüntüleme verilerini hazırla
     const viewData = {
       id: algorithm._id,
       title: algorithm.title,
       description: algorithm.description.substring(0, 100) + (algorithm.description.length > 100 ? '...' : ''),
       complexity: algorithm.complexity.time.worst,
       difficulty: getDifficulty(algorithm),
-      url: `/algorithms/detail/${algorithmId}`
+      url: `/#/algorithm/${encodeURIComponent(algorithm.title)}`
     };
     
     // Algoritma görüntüleme olayını özel event olarak tetikle
     const event = new CustomEvent('algorithmViewed', { detail: viewData });
     window.dispatchEvent(event);
     
-    // Ayrıca API'ye bildir (back-end entegrasyonu için)
-    // api.userProgress.recordView(algorithm._id);
+    // API'ye bildir (back-end entegrasyonu)
+    const userId = localStorage.getItem('userId');
+    console.log('localStorage userId:', userId);
     
-    console.log(`"${algorithm.title}" algoritması görüntülendi`);
+    if (userId) {
+      // userId'den "user_" önekini kaldır (eğer varsa)
+      const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
+      
+      console.log(`Algoritma görüntüleme kaydı gönderiliyor: ${algorithm.title} (${algorithm._id})`);
+      console.log(`Kullanıcı ID: ${cleanUserId}`);
+      
+      // Backend'in çalıştığı doğru portu kullan (3000 olarak varsayıyoruz, backend/server.js'de belirtildiği gibi)
+      const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/algo-viewed/${algorithm._id}`;
+      
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          difficulty: getDifficulty(algorithm),
+          title: algorithm.title  // Başlığı da gönderelim
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          console.error(`API Hatası (${response.status}): ${apiUrl}`);
+          return response.text().then(text => {
+            throw new Error(`HTTP Hata: ${response.status} - ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Algoritma görüntüleme kaydedildi:', data);
+      })
+      .catch(error => {
+        console.error('Algoritma görüntüleme kaydedilemedi:', error);
+        // Hata durumunda alternatif bir yaklaşım deneyebiliriz - başlığı kullanarak tekrar deneyelim
+        if (algorithm.title) {
+          console.log(`Alternatif yöntemle yeniden deneniyor (başlıkla): ${algorithm.title}`);
+          
+          fetch(`http://localhost:3000/api/users/${cleanUserId}/algo-viewed/${encodeURIComponent(algorithm.title)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              difficulty: getDifficulty(algorithm),
+              title: algorithm.title
+            })
+          })
+          .then(response => response.json())
+          .then(data => console.log('Alternatif yöntemle kaydedildi:', data))
+          .catch(err => console.error('Alternatif yöntem de başarısız:', err));
+        }
+      });
+    } else {
+      console.log('Kullanıcı giriş yapmadığı için görüntüleme kaydedilmiyor');
+    }
+    
+    console.log(`"${algorithm.title}" algoritması görüntülendi`, algorithm);
   };
   
   // Algoritma zorluğunu belirle

@@ -107,8 +107,20 @@ const LoginScreen: React.FC = () => {
       // Başarılı giriş
       console.log('Giriş başarılı:', result);
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('username', result.user.username || loginEmail.split('@')[0]);
-      localStorage.setItem('userId', result.user._id?.toString() || '');
+      
+      // Backend'den gelen yanıt formatını kontrol et ve uygun şekilde değerleri al
+      // Server yanıtı: { message: 'Giriş başarılı', username: user.username, id: user._id }
+      const username = result.username || loginEmail.split('@')[0];
+      localStorage.setItem('username', username);
+      
+      // Backend'den gelen userId değerini kontrol et
+      // Server doğrudan id olarak gönderir
+      const userId = result.id || '';
+      
+      // userId'yi doğru formatta sakla (user_ prefix olmadan)
+      localStorage.setItem('userId', userId ? userId.toString() : '');
+      console.log('Kaydedilen userId:', userId);
+      
       navigate('/home');
     } catch (error: any) {
       console.error('Giriş sırasında hata:', error);
