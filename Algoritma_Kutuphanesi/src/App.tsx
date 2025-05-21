@@ -6,6 +6,7 @@ import LoginScreen from './components/LoginScreen';
 import AlgorithmListScreen from './components/AlgorithmListScreen';
 import AlgorithmDetailScreen from './components/AlgorithmDetailScreen';
 import ProfileScreen from './components/ProfileScreen';
+import AlgorithmVisualizationPage from './components/AlgorithmVisualizationPage';
 import './App.css';
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
         <Route path="/algorithms/:categoryId" element={<AlgorithmListScreen />} />
         <Route path="/algorithm/:algorithmId" element={<AlgorithmDetailScreen />} />
         <Route path="/profile" element={<ProfileScreen />} />
+        <Route path="/visualizations" element={<AlgorithmVisualizationPage />} />
         <Route path="*" element={<div>Sayfa bulunamadı</div>} />
       </Routes>
     </div>

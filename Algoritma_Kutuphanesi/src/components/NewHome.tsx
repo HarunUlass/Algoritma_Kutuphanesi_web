@@ -183,6 +183,100 @@ const difficultyColors = {
   'Zor': '#e74c3c',
 };
 
+// Kategori ve alt kategorilere göre popüler algoritmalar
+const popularAlgorithmsByCategory: { 
+  [categoryId: string]: { 
+    [subCategory: string]: Algorithm[] 
+  } 
+} = {
+  '1': { // Veri Yapıları
+    'Diziler': [
+      {
+        id: '5',
+        title: 'Bubble Sort',
+        description: 'Yan yana bulunan elemanları karşılaştırarak sıralama yapan basit bir algoritmadır.',
+        complexity: 'O(n²)',
+        difficulty: 'Kolay',
+        category: '1',
+        subCategory: 'Diziler',
+        icon: '🔄'
+      },
+      {
+        id: '6',
+        title: 'Quick Sort',
+        description: 'Böl ve yönet yaklaşımını kullanan hızlı ve verimli bir sıralama algoritmasıdır.',
+        complexity: 'O(n log n)',
+        difficulty: 'Orta',
+        category: '1',
+        subCategory: 'Diziler',
+        icon: '⚡'
+      },
+      {
+        id: '7',
+        title: 'Binary Search',
+        description: 'Sıralı bir dizide bir elemanın verimli şekilde aranmasını sağlayan algoritmadır.',
+        complexity: 'O(log n)',
+        difficulty: 'Kolay',
+        category: '1',
+        subCategory: 'Diziler',
+        icon: '🔍'
+      }
+    ],
+    'Ağaçlar': [
+      {
+        id: '8',
+        title: 'İkili Arama Ağacı',
+        description: 'Her düğümün sol alt ağacındaki değerlerin kendisinden küçük, sağ alt ağacındaki değerlerin kendisinden büyük olduğu veri yapısıdır.',
+        complexity: 'O(log n)',
+        difficulty: 'Orta',
+        category: '1',
+        subCategory: 'Ağaçlar',
+        icon: '🌳'
+      }
+    ]
+  },
+  '2': { // Derin Öğrenme
+    'CNN': [
+      {
+        id: '10',
+        title: 'Evrişimli Sinir Ağları',
+        description: 'Görüntü tanıma ve işleme için tasarlanmış derin öğrenme mimarisidir.',
+        complexity: 'O(n⁴)',
+        difficulty: 'Zor',
+        category: '2',
+        subCategory: 'CNN',
+        icon: '🧠'
+      }
+    ]
+  },
+  '3': { // Makine Öğrenmesi
+    'Denetimsiz Öğrenme': [
+      {
+        id: '9',
+        title: 'K-Means Kümeleme',
+        description: 'Verileri k sayıda kümeye ayıran bir kümeleme algoritmasıdır.',
+        complexity: 'O(k·n·t)',
+        difficulty: 'Orta',
+        category: '3',
+        subCategory: 'Denetimsiz Öğrenme',
+        icon: '📊'
+      }
+    ],
+    'Denetimli Öğrenme': [
+      {
+        id: '19',
+        title: 'Lineer Regresyon',
+        description: 'Bağımlı değişkenle bağımsız değişkenler arasında doğrusal ilişki kuran yöntem.',
+        complexity: 'O(n²)',
+        difficulty: 'Kolay',
+        category: '3',
+        subCategory: 'Denetimli Öğrenme',
+        icon: '📈'
+      }
+    ]
+  }
+};
+
 const NewHome: React.FC = () => {
   // localStorage'dan oturum durumunu kontrol et
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -485,21 +579,57 @@ const NewHome: React.FC = () => {
               <span className="section-title-accent"></span>
               Popüler Algoritmalar
             </div>
-            <div className="featured-algorithms">
-              {featuredCards.map(card => (
-                <Link 
-                  to={card.link} 
-                  className="algorithm-card" 
-                  key={card.id}
-                >
-                  <div className="algorithm-info">
-                    <div className="algorithm-title">{card.title}</div>
-                    <div className="algorithm-description">{card.description}</div>
-                    <div className="algorithm-complexity">Karmaşıklık: {card.complexity}</div>
+            
+            <div className="popular-algorithms-container">
+              {categories.map((category) => {
+                const categoryAlgorithms = popularAlgorithmsByCategory[category.id];
+                
+                // Bu kategori için alt kategoriler ve algoritmalar yoksa gösterme
+                if (!categoryAlgorithms || Object.keys(categoryAlgorithms).length === 0) {
+                  return null;
+                }
+                
+                return (
+                  <div className="category-algorithms" key={category.id}>
+                    <h3 className="category-algorithms-title" style={{ color: category.color }}>
+                      {category.icon} {category.title}
+                    </h3>
+                    
+                    <div className="subcategory-algorithms-container">
+                      {Object.entries(categoryAlgorithms).map(([subCategory, algorithms]) => (
+                        <div className="subcategory-algorithms" key={subCategory}>
+                          <h4 className="subcategory-title">{subCategory}</h4>
+                          
+                          <div className="algorithms-grid">
+                            {algorithms.map(algorithm => (
+                              <Link 
+                                to={`/algorithm/${algorithm.title}`} 
+                                className="algorithm-card" 
+                                key={algorithm.id}
+                              >
+                                <div className="algorithm-info">
+                                  <div className="algorithm-title-row">
+                                    <div className="algorithm-title">{algorithm.title}</div>
+                                    <div 
+                                      className="algorithm-difficulty"
+                                      style={{ backgroundColor: difficultyColors[algorithm.difficulty as keyof typeof difficultyColors] }}
+                                    >
+                                      {algorithm.difficulty}
+                                    </div>
+                                  </div>
+                                  <div className="algorithm-description">{algorithm.description}</div>
+                                  <div className="algorithm-complexity">Karmaşıklık: {algorithm.complexity}</div>
+                                </div>
+                                <div className="algorithm-icon">{algorithm.icon}</div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="algorithm-icon">{card.icon}</div>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           </section>
           

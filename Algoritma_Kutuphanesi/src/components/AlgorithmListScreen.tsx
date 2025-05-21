@@ -75,6 +75,15 @@ const algorithmData: Algorithm[] = [
     category: '1',
     subCategory: 'Diziler'
   },
+  {
+    id: '18',
+    title: 'Linear Search',
+    description: 'Diziyi baştan sona tarayarak arama yapar.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '1',
+    subCategory: 'Diziler'
+  },
   
   // Veri Yapıları - Bağlı Listeler
   {
@@ -153,6 +162,24 @@ const algorithmData: Algorithm[] = [
     category: '3',
     subCategory: 'Denetimli Öğrenme'
   },
+  {
+    id: '19',
+    title: 'Lineer Regresyon',
+    description: 'Bağımlı değişkenle bağımsız değişkenler arasında doğrusal ilişki kuran yöntem.',
+    complexity: 'O(n²)',
+    difficulty: 'Kolay',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
+  {
+    id: '20',
+    title: 'Lojistik Regresyon',
+    description: 'İkili sınıflandırma problemleri için kullanılan regresyon yöntemi.',
+    complexity: 'O(n²)',
+    difficulty: 'Kolay',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
   
   // Makine Öğrenmesi - Denetimsiz Öğrenme
   {
@@ -164,8 +191,17 @@ const algorithmData: Algorithm[] = [
     category: '3', 
     subCategory: 'Denetimsiz Öğrenme'
   },
+  {
+    id: '21',
+    title: 'PCA',
+    description: 'Temel Bileşen Analizi, boyut indirgeme tekniği.',
+    complexity: 'O(n³)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Denetimsiz Öğrenme'
+  },
   
-  // Derin Öğrenme
+  // Derin Öğrenme - Sinir Ağları
   {
     id: '16',
     title: 'Geri Yayılım Algoritması',
@@ -176,6 +212,17 @@ const algorithmData: Algorithm[] = [
     subCategory: 'Sinir Ağları'
   },
   {
+    id: '22',
+    title: 'MLP',
+    description: 'Çok Katmanlı Algılayıcı, temel ileri beslemeli sinir ağı mimarisi.',
+    complexity: 'Değişken',
+    difficulty: 'Orta',
+    category: '2',
+    subCategory: 'Sinir Ağları'
+  },
+  
+  // Derin Öğrenme - CNN
+  {
     id: '17',
     title: 'Evrişimli Sinir Ağları',
     description: 'Görüntü tanıma ve işleme için tasarlanmış derin öğrenme mimarisidir.',
@@ -183,6 +230,204 @@ const algorithmData: Algorithm[] = [
     difficulty: 'Zor',
     category: '2',
     subCategory: 'CNN'
+  },
+  
+  // Derin Öğrenme - RNN
+  {
+    id: '23',
+    title: 'LSTM',
+    description: 'Uzun-Kısa Vadeli Bellek, uzun vadeli bağımlılıkları öğrenebilen tekrarlayan sinir ağı türü.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '2',
+    subCategory: 'RNN'
+  },
+  {
+    id: '24',
+    title: 'GRU',
+    description: 'Kapılı Tekrarlayan Birim, LSTM\'in daha basit alternatifi.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '2',
+    subCategory: 'RNN'
+  },
+  
+  // Doğal Dil İşleme - Tokenizasyon
+  {
+    id: '25',
+    title: 'Word Tokenization',
+    description: 'Metni kelime birimlerine ayırma işlemi.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '4',
+    subCategory: 'Tokenizasyon'
+  },
+  {
+    id: '26',
+    title: 'Sentence Tokenization',
+    description: 'Metni cümle birimlerine ayırma işlemi.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '4',
+    subCategory: 'Tokenizasyon'
+  },
+  
+  // Doğal Dil İşleme - Vektör Modeller
+  {
+    id: '27',
+    title: 'Word2Vec',
+    description: 'Kelimeleri vektör uzayında temsil eden model.',
+    complexity: 'O(n)',
+    difficulty: 'Orta',
+    category: '4',
+    subCategory: 'Vektör Modeller'
+  },
+  {
+    id: '28',
+    title: 'GloVe',
+    description: 'Global Vectors for Word Representation, kelime vektörlerini oluşturan model.',
+    complexity: 'O(n²)',
+    difficulty: 'Orta',
+    category: '4',
+    subCategory: 'Vektör Modeller'
+  },
+  {
+    id: '29',
+    title: 'FastText',
+    description: 'Karakter n-gramlarını kullanan kelime vektörü modeli.',
+    complexity: 'O(n)',
+    difficulty: 'Orta',
+    category: '4',
+    subCategory: 'Vektör Modeller'
+  },
+  
+  // Doğal Dil İşleme - Duygu Analizi
+  {
+    id: '30',
+    title: 'Naive Bayes',
+    description: 'Metinlerin duygusal tonunu belirlemek için kullanılan olasılıksal sınıflandırıcı.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '4',
+    subCategory: 'Duygu Analizi'
+  },
+  {
+    id: '31',
+    title: 'LSTM Duygu Analizi',
+    description: 'Uzun-Kısa Vadeli Bellek ağları kullanarak duygu analizi yapma.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '4',
+    subCategory: 'Duygu Analizi'
+  },
+  
+  // Doğal Dil İşleme - Makine Çevirisi
+  {
+    id: '32',
+    title: 'Seq2Seq',
+    description: 'Diziden diziye çeviri yapan sinir ağı mimarisi.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '4',
+    subCategory: 'Makine Çevirisi'
+  },
+  {
+    id: '33',
+    title: 'Transformer',
+    description: 'Dikkat mekanizması kullanan modern makine çevirisi mimarisi.',
+    complexity: 'O(n²)',
+    difficulty: 'Zor',
+    category: '4',
+    subCategory: 'Makine Çevirisi'
+  },
+  
+  // Bilgisayar Görüşü - Görüntü İşleme
+  {
+    id: '34',
+    title: 'Kenar Algılama',
+    description: 'Görüntülerdeki kenarları tespit eden algoritmalar (Sobel, Canny vb.).',
+    complexity: 'O(n²)',
+    difficulty: 'Orta',
+    category: '5',
+    subCategory: 'Görüntü İşleme'
+  },
+  {
+    id: '35',
+    title: 'Filtreleme',
+    description: 'Görüntülere çeşitli filtreler uygulama teknikleri.',
+    complexity: 'O(n²)',
+    difficulty: 'Kolay',
+    category: '5',
+    subCategory: 'Görüntü İşleme'
+  },
+  
+  // Bilgisayar Görüşü - Nesne Tespiti
+  {
+    id: '36',
+    title: 'YOLO',
+    description: 'You Only Look Once, gerçek zamanlı nesne tespiti algoritması.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: 'Nesne Tespiti'
+  },
+  {
+    id: '37',
+    title: 'R-CNN',
+    description: 'Region-based Convolutional Neural Networks, bölge tabanlı nesne tespiti.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: 'Nesne Tespiti'
+  },
+  {
+    id: '38',
+    title: 'SSD',
+    description: 'Single Shot Detector, tek geçişli nesne tespiti algoritması.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: 'Nesne Tespiti'
+  },
+  
+  // Bilgisayar Görüşü - Segmentasyon
+  {
+    id: '39',
+    title: 'U-Net',
+    description: 'Biyomedikal görüntü segmentasyonu için geliştirilen CNN mimarisi.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: 'Segmentasyon'
+  },
+  {
+    id: '40',
+    title: 'Mask R-CNN',
+    description: 'Nesne tespiti ve instance segmentasyonu birleştiren model.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: 'Segmentasyon'
+  },
+  
+  // Bilgisayar Görüşü - 3D Görüntüleme
+  {
+    id: '41',
+    title: 'PointNet',
+    description: '3D nokta bulutları üzerinde çalışan derin öğrenme mimarisi.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: '3D Görüntüleme'
+  },
+  {
+    id: '42',
+    title: 'SLAM',
+    description: 'Eşzamanlı Lokalizasyon ve Haritalama, robotik ve AR uygulamalarında kullanılır.',
+    complexity: 'O(n²)',
+    difficulty: 'Zor',
+    category: '5',
+    subCategory: '3D Görüntüleme'
   }
 ];
 
@@ -211,6 +456,22 @@ const categories = {
     description: 'Regresyon, Sınıflandırma, Kümeleme ve diğer ML algoritmaları',
     color: '#e74c3c',
     subCategories: ['Denetimli Öğrenme', 'Denetimsiz Öğrenme', 'Pekiştirmeli Öğrenme']
+  },
+  '4': {
+    id: '4',
+    title: 'Doğal Dil İşleme',
+    icon: '📝',
+    description: 'Metin işleme, Dil Modelleri, Tokenizasyon ve NLP teknikleri',
+    color: '#f39c12',
+    subCategories: ['Tokenizasyon', 'Vektör Modeller', 'Duygu Analizi', 'Makine Çevirisi']
+  },
+  '5': {
+    id: '5',
+    title: 'Bilgisayar Görüşü',
+    icon: '👁️',
+    description: 'Görüntü işleme, nesne algılama ve bilgisayar görüşü algoritmaları',
+    color: '#27ae60',
+    subCategories: ['Görüntü İşleme', 'Nesne Tespiti', 'Segmentasyon', '3D Görüntüleme']
   }
 };
 

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/AlgorithmDetailScreen.css';
 import { api } from '../services/apiClient';
+import AlgorithmVisualization from './AlgorithmVisualization';
+import GraphVisualization from './GraphVisualization';
+import TreeVisualization from './TreeVisualization';
 
 // Tab types
 type TabType = 'description' | 'code' | 'visual';
@@ -115,12 +118,12 @@ const AlgorithmDetailScreen: React.FC<AlgorithmDetailScreenProps> = () => {
   const recordAlgorithmView = (algorithm: Algorithm) => {
     // Görüntüleme verilerini hazırla
     const viewData = {
-      id: algorithm._id,
-      title: algorithm.title,
-      description: algorithm.description.substring(0, 100) + (algorithm.description.length > 100 ? '...' : ''),
-      complexity: algorithm.complexity.time.worst,
+      id: algorithm._id || '',
+      title: algorithm.title || '',
+      description: (algorithm.description || '').substring(0, 100) + (algorithm.description && algorithm.description.length > 100 ? '...' : ''),
+      complexity: algorithm.complexity?.time?.worst || '',
       difficulty: getDifficulty(algorithm),
-      url: `/#/algorithm/${encodeURIComponent(algorithm.title)}`
+      url: `/#/algorithm/${encodeURIComponent(algorithm.title || '')}`
     };
     
     // Algoritma görüntüleme olayını özel event olarak tetikle
@@ -135,11 +138,11 @@ const AlgorithmDetailScreen: React.FC<AlgorithmDetailScreenProps> = () => {
       // userId'den "user_" önekini kaldır (eğer varsa)
       const cleanUserId = userId.startsWith('user_') ? userId.substring(5) : userId;
       
-      console.log(`Algoritma görüntüleme kaydı gönderiliyor: ${algorithm.title} (${algorithm._id})`);
+      console.log(`Algoritma görüntüleme kaydı gönderiliyor: ${algorithm.title} (${algorithm._id || ''})`);
       console.log(`Kullanıcı ID: ${cleanUserId}`);
       
       // Backend'in çalıştığı doğru portu kullan (3000 olarak varsayıyoruz, backend/server.js'de belirtildiği gibi)
-      const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/algo-viewed/${algorithm._id}`;
+      const apiUrl = `http://localhost:3000/api/users/${cleanUserId}/algo-viewed/${algorithm._id || ''}`;
       
       fetch(apiUrl, {
         method: 'POST',
@@ -193,6 +196,11 @@ const AlgorithmDetailScreen: React.FC<AlgorithmDetailScreenProps> = () => {
   
   // Algoritma zorluğunu belirle
   const getDifficulty = (algorithm: Algorithm): string => {
+    // Algoritma complexity bilgisi yoksa varsayılan değer dön
+    if (!algorithm?.complexity?.time?.worst) {
+      return 'Belirtilmemiş';
+    }
+    
     // Burada algoritmanın zorluğunu belirlemek için bir mantık uygulayabiliriz
     // Örneğin, algoritmanın karmaşıklığına bakarak zorluk seviyesini belirleyebiliriz
     const worstComplexity = algorithm.complexity.time.worst;
@@ -383,20 +391,69 @@ function comingSoon() {
             
             {activeTab === 'visual' && (
               <div className="visual-container">
-                <svg width="150" height="150" viewBox="0 0 150 150">
-                  <rect width="120" height="20" x="15" y="20" rx="5" fill="#FF8C00" opacity="0.2" />
-                  <rect width="80" height="20" x="15" y="50" rx="5" fill="#FF8C00" opacity="0.4" />
-                  <rect width="60" height="20" x="15" y="80" rx="5" fill="#FF8C00" opacity="0.6" />
-                  <rect width="40" height="20" x="15" y="110" rx="5" fill="#FF8C00" opacity="0.8" />
-                </svg>
-                <div>
-                  <p className="coming-soon">Görselleştirme Çok Yakında</p>
-                  <p>Algoritma görselleştirme özelliği üzerinde çalışıyoruz. Yakında kullanıma sunulacaktır.</p>
+                <h2 className="visualization-title">Bubble Sort Görselleştirmesi</h2>
+                
+                <div className="controls-container">
+                  <button className="control-button">Yeni Dizi</button>
+                  <button className="control-button primary">Başlat</button>
+                  <div className="speed-control">
+                    <label htmlFor="speed">Hız:</label>
+                    <input 
+                      id="speed"
+                      type="range" 
+                      min="100" 
+                      max="1000" 
+                      step="100"
+                      defaultValue="500"
+                    />
+                  </div>
                 </div>
-                <div className="button-container">
-                  <button className="action-button secondary">
-                    Bildirim Al
-                  </button>
+
+                <div className="explanation-box">
+                  <p>Görselleştirmeyi başlatmak için "Başlat" düğmesine tıklayın.</p>
+                </div>
+
+                <div className="visualization-area">
+                  <div className="array-bar" style={{ height: '120px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">60</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '80px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">40</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '160px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">80</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '100px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">50</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '140px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">70</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '180px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">90</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '60px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">30</span>
+                  </div>
+                  <div className="array-bar" style={{ height: '200px', width: '30px', backgroundColor: '#6c5ce7', margin: '0 5px' }}>
+                    <span className="bar-value">100</span>
+                  </div>
+                </div>
+                
+                <div className="algorithm-info">
+                  <h3>Kabarcık Sıralama (Bubble Sort)</h3>
+                  <p>Kabarcık sıralama, her adımda yanyana duran elemanları karşılaştırıp, sıralamaya aykırı olanları yer değiştiren basit bir sıralama algoritmasıdır.</p>
+                  
+                  <div className="complexity-info">
+                    <div className="complexity-item">
+                      <span className="complexity-label">Zaman Karmaşıklığı:</span>
+                      <span className="complexity-value" style={{color: '#e67e22'}}>O(n²)</span>
+                    </div>
+                    <div className="complexity-item">
+                      <span className="complexity-label">Alan Karmaşıklığı:</span>
+                      <span className="complexity-value" style={{color: '#27ae60'}}>O(1)</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -454,7 +511,7 @@ function comingSoon() {
               <div className="section">
                 <h3 className="section-title">Zaman ve Alan Karmaşıklığı</h3>
                 <div className="complexity-container">
-                  {algorithm.complexity.time.average && (
+                  {algorithm.complexity?.time?.average && (
                     <div className="complexity-row">
                       <span className="complexity-label">Zaman Karmaşıklığı (Ortalama):</span>
                       <div className="complexity-badge" style={{ backgroundColor: '#6c5ce7' }}>
@@ -465,10 +522,10 @@ function comingSoon() {
                   <div className="complexity-row">
                     <span className="complexity-label">Zaman Karmaşıklığı (En Kötü):</span>
                     <div className="complexity-badge" style={{ backgroundColor: '#e74c3c' }}>
-                      <span className="complexity-value">{algorithm.complexity.time.worst}</span>
+                      <span className="complexity-value">{algorithm.complexity?.time?.worst || 'Belirtilmemiş'}</span>
                     </div>
                   </div>
-                  {algorithm.complexity.time.best && (
+                  {algorithm.complexity?.time?.best && (
                     <div className="complexity-row">
                       <span className="complexity-label">Zaman Karmaşıklığı (En İyi):</span>
                       <div className="complexity-badge" style={{ backgroundColor: '#2ecc71' }}>
@@ -479,13 +536,13 @@ function comingSoon() {
                   <div className="complexity-row">
                     <span className="complexity-label">Alan Karmaşıklığı:</span>
                     <div className="complexity-badge" style={{ backgroundColor: '#3498db' }}>
-                      <span className="complexity-value">{algorithm.complexity.space}</span>
+                      <span className="complexity-value">{algorithm.complexity?.space || 'Belirtilmemiş'}</span>
                     </div>
                   </div>
                   <div className="complexity-row">
                     <span className="complexity-label">Stabilite:</span>
                     <div className="complexity-badge" style={{ backgroundColor: '#9b59b6' }}>
-                      <span className="complexity-value">{algorithm.stability}</span>
+                      <span className="complexity-value">{algorithm.stability || 'Belirtilmemiş'}</span>
                     </div>
                   </div>
                 </div>
@@ -494,9 +551,13 @@ function comingSoon() {
               <div className="section">
                 <h3 className="section-title">Algoritma Adımları</h3>
                 <ol className="steps-list">
-                  {algorithm.steps.map((step, index) => (
-                    <li key={index} className="step-item">{step}</li>
-                  ))}
+                  {algorithm.steps && algorithm.steps.length > 0 ? (
+                    algorithm.steps.map((step, index) => (
+                      <li key={index} className="step-item">{step}</li>
+                    ))
+                  ) : (
+                    <li className="step-item">Adım bilgisi henüz eklenmemiş.</li>
+                  )}
                 </ol>
               </div>
               
@@ -506,17 +567,25 @@ function comingSoon() {
                   <div className="pros-section">
                     <h4>Avantajlar</h4>
                     <ul className="pros-list">
-                      {algorithm.pros.map((pro, index) => (
-                        <li key={index} className="pro-item">{pro}</li>
-                      ))}
+                      {algorithm.pros && algorithm.pros.length > 0 ? (
+                        algorithm.pros.map((pro, index) => (
+                          <li key={index} className="pro-item">{pro}</li>
+                        ))
+                      ) : (
+                        <li className="pro-item">Avantaj bilgisi henüz eklenmemiş.</li>
+                      )}
                     </ul>
                   </div>
                   <div className="cons-section">
                     <h4>Dezavantajlar</h4>
                     <ul className="cons-list">
-                      {algorithm.cons.map((con, index) => (
-                        <li key={index} className="con-item">{con}</li>
-                      ))}
+                      {algorithm.cons && algorithm.cons.length > 0 ? (
+                        algorithm.cons.map((con, index) => (
+                          <li key={index} className="con-item">{con}</li>
+                        ))
+                      ) : (
+                        <li className="con-item">Dezavantaj bilgisi henüz eklenmemiş.</li>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -529,14 +598,14 @@ function comingSoon() {
               <div className="language-selector">
                 <button
                   className={`language-button active`}
-                  onClick={() => setSelectedLanguage(algorithm.exampleCode.language)}
+                  onClick={() => setSelectedLanguage(algorithm.exampleCode?.language || 'javascript')}
                 >
-                  {algorithm.exampleCode.language.charAt(0).toUpperCase() + algorithm.exampleCode.language.slice(1)}
+                  {(algorithm.exampleCode?.language || 'javascript').charAt(0).toUpperCase() + (algorithm.exampleCode?.language || 'javascript').slice(1)}
                 </button>
               </div>
               
               <pre className="code-block">
-                <code>{algorithm.exampleCode.code || 'Kod örneği bulunamadı'}</code>
+                <code>{algorithm.exampleCode?.code || 'Kod örneği bulunamadı'}</code>
               </pre>
               
               <div className="button-container">
@@ -561,21 +630,41 @@ function comingSoon() {
           
           {activeTab === 'visual' && (
             <div className="visual-container">
-              <svg width="150" height="150" viewBox="0 0 150 150">
-                <rect width="120" height="20" x="15" y="20" rx="5" fill="#FF8C00" opacity="0.2" />
-                <rect width="80" height="20" x="15" y="50" rx="5" fill="#FF8C00" opacity="0.4" />
-                <rect width="60" height="20" x="15" y="80" rx="5" fill="#FF8C00" opacity="0.6" />
-                <rect width="40" height="20" x="15" y="110" rx="5" fill="#FF8C00" opacity="0.8" />
-              </svg>
-              <div>
-                <p className="coming-soon">Görselleştirme Çok Yakında</p>
-                <p>Algoritma görselleştirme özelliği üzerinde çalışıyoruz. Yakında kullanıma sunulacaktır.</p>
-              </div>
-              <div className="button-container">
-                <button className="action-button secondary">
-                  Bildirim Al
-                </button>
-              </div>
+              {algorithm.title.toLowerCase().includes('bubble') || 
+               algorithm.title.toLowerCase().includes('kabarcık') || 
+               algorithm.title.toLowerCase().includes('kabarck') ? (
+                <AlgorithmVisualization 
+                  algorithmType="bubble sort"
+                  title="Kabarcık Sıralama (Bubble Sort)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('kırmızı-siyah') || 
+                  algorithm.title.toLowerCase().includes('kirmizi-siyah') || 
+                  algorithm.title.toLowerCase().includes('red-black') ? (
+                <TreeVisualization 
+                  algorithmType="red-black tree"
+                  title="Kırmızı-Siyah Ağaç"
+                  animationSpeed={500}
+                />
+              ) : (
+                <>
+                  <svg width="150" height="150" viewBox="0 0 150 150">
+                    <rect width="120" height="20" x="15" y="20" rx="5" fill="#FF8C00" opacity="0.2" />
+                    <rect width="80" height="20" x="15" y="50" rx="5" fill="#FF8C00" opacity="0.4" />
+                    <rect width="60" height="20" x="15" y="80" rx="5" fill="#FF8C00" opacity="0.6" />
+                    <rect width="40" height="20" x="15" y="110" rx="5" fill="#FF8C00" opacity="0.8" />
+                  </svg>
+                  <div>
+                    <p className="coming-soon">Görselleştirme Çok Yakında</p>
+                    <p>Algoritma görselleştirme özelliği üzerinde çalışıyoruz. Yakında kullanıma sunulacaktır.</p>
+                  </div>
+                  <div className="button-container">
+                    <button className="action-button secondary">
+                      Bildirim Al
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

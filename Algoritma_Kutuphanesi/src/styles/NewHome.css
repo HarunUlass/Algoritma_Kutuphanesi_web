@@ -1005,4 +1005,84 @@ body, html {
   .quiz-cards-container {
     grid-template-columns: 1fr;
   }
+}
+
+/* Popüler Algoritmalar Bölümü - Kategori/Alt Başlık Düzeni */
+.popular-algorithms-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.category-algorithms {
+  margin-bottom: 30px;
+}
+
+.category-algorithms-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  position: relative;
+  padding-left: 10px;
+  border-left: 4px solid currentColor;
+}
+
+.subcategory-algorithms-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.subcategory-algorithms {
+  margin-bottom: 20px;
+}
+
+.subcategory-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 15px;
+  color: #555;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 140, 0, 0.15);
+}
+
+.algorithms-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.algorithm-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.algorithm-difficulty {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+@media (max-width: 992px) {
+  .algorithms-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .algorithms-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-algorithms-title {
+    font-size: 18px;
+  }
+  
+  .subcategory-title {
+    font-size: 16px;
+  }
 } 
