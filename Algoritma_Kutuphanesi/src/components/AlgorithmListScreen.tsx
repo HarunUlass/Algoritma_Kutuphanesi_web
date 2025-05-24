@@ -180,6 +180,33 @@ const algorithmData: Algorithm[] = [
     category: '3',
     subCategory: 'Denetimli Öğrenme'
   },
+  {
+    id: '53',
+    title: 'KNN (K-Nearest Neighbors)',
+    description: 'K-En Yakın Komşu algoritması. Yeni bir veri noktasını en yakın k komşusunun sınıfına göre sınıflandırır.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
+  {
+    id: '54',
+    title: 'Naive Bayes',
+    description: 'Bayes teoremini kullanan olasılıksal sınıflandırma algoritması. Özellikler arasında bağımsızlık varsayımı yapar.',
+    complexity: 'O(n)',
+    difficulty: 'Kolay',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
+  {
+    id: '55',
+    title: 'Random Forest',
+    description: 'Rastgele Orman algoritması. Çoklu karar ağaçlarının oylaması ile sınıflandırma yapan topluluk öğrenme yöntemidir.',
+    complexity: 'O(n log n)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Denetimli Öğrenme'
+  },
   
   // Makine Öğrenmesi - Denetimsiz Öğrenme
   {
@@ -197,6 +224,33 @@ const algorithmData: Algorithm[] = [
     description: 'Temel Bileşen Analizi, boyut indirgeme tekniği.',
     complexity: 'O(n³)',
     difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Denetimsiz Öğrenme'
+  },
+  {
+    id: '50',
+    title: 'Hierarchical Clustering',
+    description: 'Hiyerarşik kümeleme algoritması. Verileri ağaç yapısında (dendrogram) kümelere ayırır.',
+    complexity: 'O(n³)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Denetimsiz Öğrenme'
+  },
+  {
+    id: '51',
+    title: 'Association Rule Learning',
+    description: 'Birliktelik kuralları öğrenme. Veri setindeki öğeler arasındaki ilişkileri keşfeder (Market sepeti analizi gibi).',
+    complexity: 'O(n²)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Denetimsiz Öğrenme'
+  },
+  {
+    id: '52',
+    title: 'Autoencoders',
+    description: 'Otokodlayıcılar. Girdi verilerini sıkıştırıp yeniden oluşturan sinir ağı mimarisi. Boyut indirgeme ve özellik öğrenmede kullanılır.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
     category: '3',
     subCategory: 'Denetimsiz Öğrenme'
   },
@@ -428,6 +482,71 @@ const algorithmData: Algorithm[] = [
     difficulty: 'Zor',
     category: '5',
     subCategory: '3D Görüntüleme'
+  },
+  
+  // Makine Öğrenmesi - Pekiştirmeli Öğrenme
+  {
+    id: '43',
+    title: 'Q-Öğrenme (Q-Learning)',
+    description: 'Model-free pekiştirmeli öğrenme algoritması. Ajanın optimal eylem-değer fonksiyonunu öğrenmesini sağlar.',
+    complexity: 'O(|S|×|A|)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
+  },
+  {
+    id: '44',
+    title: 'SARSA (State-Action-Reward-State-Action)',
+    description: 'On-policy temporal difference öğrenme algoritması. Mevcut politikayı takip ederek Q-değerlerini günceller.',
+    complexity: 'O(|S|×|A|)',
+    difficulty: 'Orta',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
+  },
+  {
+    id: '45',
+    title: 'REINFORCE',
+    description: 'Policy gradient yöntemlerinin temel algoritması. Politika parametrelerini doğrudan optimize eder.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
+  },
+  {
+    id: '46',
+    title: 'Aktör-Kritik (Actor-Critic)',
+    description: 'Value-based ve policy-based yöntemleri birleştiren hibrit algoritma. Aktör politikayı, kritik değer fonksiyonunu öğrenir.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
+  },
+  {
+    id: '47',
+    title: 'Proximal Policy Optimization (PPO)',
+    description: 'Policy gradient algoritmalarının gelişmiş versiyonu. Güvenli ve kararlı politika güncellemeleri sağlar.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
+  },
+  {
+    id: '48',
+    title: 'Deep Q-Network (DQN)',
+    description: 'Q-Learning algoritmasının derin sinir ağları ile birleştirilmiş hali. Karmaşık durum uzayları için uygun.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
+  },
+  {
+    id: '49',
+    title: 'Soft Actor-Critic (SAC)',
+    description: 'Maximum entropy framework kullanan off-policy aktör-kritik algoritması. Sürekli eylem uzayları için optimize edilmiştir.',
+    complexity: 'Değişken',
+    difficulty: 'Zor',
+    category: '3',
+    subCategory: 'Pekiştirmeli Öğrenme'
   }
 ];
 

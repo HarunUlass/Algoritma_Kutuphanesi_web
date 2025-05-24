@@ -638,12 +638,114 @@ function comingSoon() {
                   title="Kabarcık Sıralama (Bubble Sort)"
                   animationSpeed={500}
                 />
+              ) : algorithm.title.toLowerCase().includes('selection') || 
+                  algorithm.title.toLowerCase().includes('seçim') || 
+                  algorithm.title.toLowerCase().includes('secim') ? (
+                <AlgorithmVisualization 
+                  algorithmType="selection sort"
+                  title="Seçim Sıralama (Selection Sort)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('insertion') || 
+                  algorithm.title.toLowerCase().includes('ekleme') || 
+                  algorithm.title.toLowerCase().includes('yerleştirme') ? (
+                <AlgorithmVisualization 
+                  algorithmType="insertion sort"
+                  title="Ekleme Sıralama (Insertion Sort)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('merge') || 
+                  algorithm.title.toLowerCase().includes('birleştirme') || 
+                  algorithm.title.toLowerCase().includes('birlestirme') ? (
+                <AlgorithmVisualization 
+                  algorithmType="merge sort"
+                  title="Birleştirme Sıralama (Merge Sort)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('quick') || 
+                  algorithm.title.toLowerCase().includes('hızlı') || 
+                  algorithm.title.toLowerCase().includes('hizli') ? (
+                <AlgorithmVisualization 
+                  algorithmType="quick sort"
+                  title="Hızlı Sıralama (Quick Sort)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('binary') || 
+                  algorithm.title.toLowerCase().includes('ikili') || 
+                  algorithm.title.toLowerCase().includes('arama') ? (
+                <AlgorithmVisualization 
+                  algorithmType="binary search"
+                  title="İkili Arama (Binary Search)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('linear') || 
+                  algorithm.title.toLowerCase().includes('doğrusal') || 
+                  algorithm.title.toLowerCase().includes('dogrusal') || 
+                  algorithm.title.toLowerCase().includes('sıralı') || 
+                  algorithm.title.toLowerCase().includes('sirali') ? (
+                <AlgorithmVisualization 
+                  algorithmType="linear search"
+                  title="Doğrusal Arama (Linear Search)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('doğrusal') || 
+                  algorithm.title.toLowerCase().includes('dogrusal') || 
+                  algorithm.title.toLowerCase().includes('sıralı') || 
+                  algorithm.title.toLowerCase().includes('sirali') ? (
+                <AlgorithmVisualization 
+                  algorithmType="linear search"
+                  title="Doğrusal Arama (Linear Search)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('çift yönlü') || 
+                  algorithm.title.toLowerCase().includes('çift yonlu') || 
+                  algorithm.title.toLowerCase().includes('cift yonlu') || 
+                  algorithm.title.toLowerCase().includes('çiftli') || 
+                  algorithm.title.toLowerCase().includes('ciftli') || 
+                  algorithm.title.toLowerCase().includes('doubly') || 
+                  algorithm.title.toLowerCase().includes('çift bağlı') || 
+                  algorithm.title.toLowerCase().includes('cift bagli') ? (
+                <AlgorithmVisualization 
+                  algorithmType="doubly linked list"
+                  title="Çift Yönlü Bağlı Liste (Doubly Linked List)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('dairesel') || 
+                  algorithm.title.toLowerCase().includes('döngüsel') || 
+                  algorithm.title.toLowerCase().includes('dongusel') || 
+                  algorithm.title.toLowerCase().includes('halka') || 
+                  algorithm.title.toLowerCase().includes('circular') ? (
+                <AlgorithmVisualization 
+                  algorithmType="circular linked list"
+                  title="Dairesel Bağlı Liste (Circular Linked List)"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('tekli') || 
+                  algorithm.title.toLowerCase().includes('tek yönlü') || 
+                  algorithm.title.toLowerCase().includes('tek yonlu') || 
+                  algorithm.title.toLowerCase().includes('singly') || 
+                  algorithm.title.toLowerCase().includes('bağlı liste') || 
+                  algorithm.title.toLowerCase().includes('bagli liste') ? (
+                <AlgorithmVisualization 
+                  algorithmType="singly linked list"
+                  title="Tek Yönlü Bağlı Liste (Singly Linked List)"
+                  animationSpeed={500}
+                />
               ) : algorithm.title.toLowerCase().includes('kırmızı-siyah') || 
                   algorithm.title.toLowerCase().includes('kirmizi-siyah') || 
                   algorithm.title.toLowerCase().includes('red-black') ? (
                 <TreeVisualization 
                   algorithmType="red-black tree"
                   title="Kırmızı-Siyah Ağaç"
+                  animationSpeed={500}
+                />
+              ) : algorithm.title.toLowerCase().includes('avl') || 
+                  algorithm.title.toLowerCase().includes('adelson') || 
+                  algorithm.title.toLowerCase().includes('velsky') || 
+                  algorithm.title.toLowerCase().includes('landis') ? (
+                <TreeVisualization 
+                  algorithmType="avl tree"
+                  title="AVL Ağacı"
                   animationSpeed={500}
                 />
               ) : (

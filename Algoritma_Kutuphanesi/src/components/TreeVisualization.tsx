@@ -15,15 +15,35 @@ interface TreeNode {
   highlighted?: boolean;
 }
 
+// AVL Ağacı için yeni düğüm yapısı
+interface AVLTreeNode {
+  id: number;
+  value: number;
+  height: number;
+  balanceFactor: number;
+  left: number | null;
+  right: number | null;
+  parent: number | null;
+  x?: number;
+  y?: number;
+  highlighted?: boolean;
+}
+
 interface RedBlackTree {
   nodes: TreeNode[];
+  root: number | null;
+}
+
+// AVL Ağacı yapısı
+interface AVLTree {
+  nodes: AVLTreeNode[];
   root: number | null;
 }
 
 interface TreeVisualizationProps {
   algorithmType: string;
   title: string;
-  customTree?: RedBlackTree;
+  customTree?: RedBlackTree | AVLTree;
   animationSpeed?: number;
 }
 
@@ -34,13 +54,13 @@ const LEVEL_HEIGHT = 80;
 const RED_COLOR = '#e74c3c';
 const BLACK_COLOR = '#2c3e50';
 const HIGHLIGHT_COLOR = '#f39c12';
+const AVL_NODE_COLOR = '#3498db';
+const AVL_UNBALANCED_COLOR = '#e74c3c';
+const AVL_BALANCED_COLOR = '#27ae60';
 
-// Örnek kırmızı-siyah ağaç
-const createSampleRedBlackTree = (): RedBlackTree => {
-  // Rastgele sayıda düğüm oluştur (5-15 arası)
-  const nodeCount = Math.floor(Math.random() * 11) + 5;
-  
-  // Kullanılacak değerler kümesi (1-99 arası)
+// Örnek AVL ağacı oluştur
+const createSampleAVLTree = (): AVLTree => {
+  const nodeCount = Math.floor(Math.random() * 8) + 5; // 5-12 arası
   const availableValues = Array.from({ length: 99 }, (_, i) => i + 1);
   
   // Rastgele değerler seç
@@ -51,139 +71,655 @@ const createSampleRedBlackTree = (): RedBlackTree => {
     availableValues.splice(randomIndex, 1);
   }
   
-  // Değerleri sırala
-  selectedValues.sort((a, b) => a - b);
+  // AVL ağacını adım adım oluştur
+  const tree: AVLTree = { nodes: [], root: null };
   
-  // Ağaç düğümlerini oluşturmaya başla
-  const nodes: TreeNode[] = [];
+  for (const value of selectedValues) {
+    insertAVLNode(tree, value);
+  }
   
-  // Kök düğümü oluştur (her zaman siyah)
-  const rootValue = selectedValues[Math.floor(selectedValues.length / 2)];
-  nodes.push({
-    id: 0,
-    value: rootValue,
-    color: 'black',
+  return tree;
+};
+
+// AVL ağacına düğüm ekleme
+const insertAVLNode = (tree: AVLTree, value: number): void => {
+  const newNodeId = tree.nodes.length;
+  const newNode: AVLTreeNode = {
+    id: newNodeId,
+    value: value,
+    height: 1,
+    balanceFactor: 0,
     left: null,
     right: null,
     parent: null
-  });
+  };
   
-  // İkili arama ağacı oluştur
-  for (let i = 0; i < selectedValues.length; i++) {
-    const value = selectedValues[i];
+  tree.nodes.push(newNode);
+  
+  if (tree.root === null) {
+    tree.root = newNodeId;
+    return;
+  }
+  
+  // Standart BST ekleme
+  let currentId: number | null = tree.root;
+  let parentId: number | null = null;
+  
+  while (currentId !== null) {
+    parentId = currentId;
+    const current: AVLTreeNode = tree.nodes[currentId];
     
-    // Kök değerini atla, zaten ekledik
-    if (value === rootValue) continue;
-    
-    // Yeni düğüm
-    const newNodeId = nodes.length;
-    
-    // Düğümü ekleyecek yeri bul
-    let currentNodeId = 0; // Kökten başla
-    let parentNodeId: number | null = null;
-    let isLeftChild = false;
-    
-    while (currentNodeId !== null) {
-      const currentNode = nodes[currentNodeId];
-      parentNodeId = currentNodeId;
-      
-      if (value < currentNode.value) {
-        currentNodeId = currentNode.left;
-        isLeftChild = true;
+    if (value < current.value) {
+      currentId = current.left;
+    } else if (value > current.value) {
+      currentId = current.right;
       } else {
-        currentNodeId = currentNode.right;
-        isLeftChild = false;
-      }
+      // Değer zaten var, eklemeyi iptal et
+      tree.nodes.pop();
+      return;
     }
+  }
+  
+  // Yeni düğümü bağla
+  if (parentId !== null) {
+    newNode.parent = parentId;
+    const parent: AVLTreeNode = tree.nodes[parentId];
     
-    // Yeni düğümü oluştur (Başlangıçta kırmızı)
+    if (value < parent.value) {
+      parent.left = newNodeId;
+      } else {
+      parent.right = newNodeId;
+    }
+  }
+  
+  // Yükseklikleri ve balance factor'ları güncelle
+  updateHeightsAndBalance(tree, parentId);
+  
+  // AVL özelliklerini koru
+  rebalanceAVL(tree, parentId);
+};
+
+// Yükseklik hesaplama
+const getNodeHeight = (tree: AVLTree, nodeId: number | null): number => {
+  if (nodeId === null) return 0;
+  return tree.nodes[nodeId].height;
+};
+
+// Balance factor hesaplama
+const getBalanceFactor = (tree: AVLTree, nodeId: number): number => {
+  const node: AVLTreeNode = tree.nodes[nodeId];
+  return getNodeHeight(tree, node.left) - getNodeHeight(tree, node.right);
+};
+
+// Yükseklikleri ve balance factor'ları güncelle
+const updateHeightsAndBalance = (tree: AVLTree, nodeId: number | null): void => {
+  if (nodeId === null) return;
+  
+  const node: AVLTreeNode = tree.nodes[nodeId];
+  
+  // Yüksekliği güncelle
+  const leftHeight = getNodeHeight(tree, node.left);
+  const rightHeight = getNodeHeight(tree, node.right);
+  node.height = Math.max(leftHeight, rightHeight) + 1;
+  
+  // Balance factor'ı güncelle
+  node.balanceFactor = leftHeight - rightHeight;
+  
+  // Ebeveyne doğru devam et
+  updateHeightsAndBalance(tree, node.parent);
+};
+
+// AVL dengeleme
+const rebalanceAVL = (tree: AVLTree, nodeId: number | null): void => {
+  if (nodeId === null) return;
+  
+  const node: AVLTreeNode = tree.nodes[nodeId];
+  
+  // Balance factor kontrolü
+  if (Math.abs(node.balanceFactor) > 1) {
+    // Dengeleme gerekli
+    if (node.balanceFactor > 1) {
+      // Sol ağır
+      const leftChild = node.left !== null ? tree.nodes[node.left] : null;
+      if (leftChild && leftChild.balanceFactor < 0) {
+        // LR durumu
+        if (node.left !== null) {
+          leftRotateAVL(tree, node.left);
+        }
+      }
+      // LL durumu
+      rightRotateAVL(tree, nodeId);
+    } else {
+      // Sağ ağır  
+      const rightChild = node.right !== null ? tree.nodes[node.right] : null;
+      if (rightChild && rightChild.balanceFactor > 0) {
+        // RL durumu
+        if (node.right !== null) {
+          rightRotateAVL(tree, node.right);
+        }
+      }
+      // RR durumu
+      leftRotateAVL(tree, nodeId);
+    }
+  }
+  
+  // Ebeveyne doğru devam et
+  rebalanceAVL(tree, node.parent);
+};
+
+// AVL sol rotasyon
+const leftRotateAVL = (tree: AVLTree, nodeId: number): void => {
+  const node: AVLTreeNode = tree.nodes[nodeId];
+  const rightChildId = node.right;
+  
+  if (rightChildId === null) return;
+  
+  const rightChild: AVLTreeNode = tree.nodes[rightChildId];
+  
+  // Rotasyon
+  node.right = rightChild.left;
+  if (rightChild.left !== null) {
+    tree.nodes[rightChild.left].parent = nodeId;
+  }
+  
+  rightChild.parent = node.parent;
+  if (node.parent === null) {
+    tree.root = rightChildId;
+  } else {
+    const parent: AVLTreeNode = tree.nodes[node.parent];
+    if (parent.left === nodeId) {
+      parent.left = rightChildId;
+    } else {
+      parent.right = rightChildId;
+    }
+  }
+  
+  rightChild.left = nodeId;
+  node.parent = rightChildId;
+  
+  // Yükseklikleri güncelle
+  if (nodeId !== null) {
+    updateHeightsAndBalance(tree, nodeId);
+  }
+  if (rightChildId !== null) {
+    updateHeightsAndBalance(tree, rightChildId);
+  }
+};
+
+// AVL sağ rotasyon
+const rightRotateAVL = (tree: AVLTree, nodeId: number): void => {
+  const node: AVLTreeNode = tree.nodes[nodeId];
+  const leftChildId = node.left;
+  
+  if (leftChildId === null) return;
+  
+  const leftChild: AVLTreeNode = tree.nodes[leftChildId];
+  
+  // Rotasyon
+  node.left = leftChild.right;
+  if (leftChild.right !== null) {
+    tree.nodes[leftChild.right].parent = nodeId;
+  }
+  
+  leftChild.parent = node.parent;
+  if (node.parent === null) {
+    tree.root = leftChildId;
+  } else {
+    const parent: AVLTreeNode = tree.nodes[node.parent];
+    if (parent.right === nodeId) {
+      parent.right = leftChildId;
+    } else {
+      parent.left = leftChildId;
+    }
+  }
+  
+  leftChild.right = nodeId;
+  node.parent = leftChildId;
+  
+  // Yükseklikleri güncelle
+  if (nodeId !== null) {
+    updateHeightsAndBalance(tree, nodeId);
+  }
+  if (leftChildId !== null) {
+    updateHeightsAndBalance(tree, leftChildId);
+  }
+};
+
+// Örnek kırmızı-siyah ağaç
+const createSampleRedBlackTree = (): RedBlackTree => {
+  // Boş ağaç ile başla
+  const tree: RedBlackTree = { nodes: [], root: null };
+  
+  // Sıralı değerler ekleyerek dengeli bir ağaç oluştur
+  const values = [50, 30, 70, 20, 40, 60, 80, 10, 25, 35, 45];
+  
+  for (const value of values) {
+    insertRedBlackNode(tree, value);
+  }
+  
+  return tree;
+};
+
+// Red-Black Tree'ye düğüm ekleme (algoritma mantığına uygun)
+const insertRedBlackNode = (tree: RedBlackTree, value: number): void => {
+  const newNodeId = tree.nodes.length;
     const newNode: TreeNode = {
       id: newNodeId,
       value: value,
-      color: 'red', // Başlangıçta kırmızı
+    color: 'red', // Yeni düğümler her zaman kırmızı başlar
       left: null,
       right: null,
-      parent: parentNodeId
+      parent: null
     };
     
-    // Ebeveyn bağlantısını güncelle
-    if (parentNodeId !== null) {
-      const parentNode = nodes[parentNodeId];
-      if (isLeftChild) {
-        parentNode.left = newNodeId;
+  tree.nodes.push(newNode);
+  
+  // Boş ağaç ise kök olarak ekle ve siyah yap
+  if (tree.root === null) {
+    tree.root = newNodeId;
+    newNode.color = 'black'; // Kök her zaman siyah
+    return;
+  }
+  
+  // Standart BST ekleme
+  let currentId: number | null = tree.root;
+      let parentId: number | null = null;
+      
+      while (currentId !== null) {
+        parentId = currentId;
+    const current: TreeNode = tree.nodes[currentId];
+        
+        if (value < current.value) {
+          currentId = current.left;
+        } else if (value > current.value) {
+          currentId = current.right;
+        } else {
+      // Değer zaten var, eklemeyi iptal et
+      tree.nodes.pop();
+          return;
+        }
+      }
+      
+  // Yeni düğümü ebeveyne bağla
+      if (parentId !== null) {
+        newNode.parent = parentId;
+    const parent: TreeNode = tree.nodes[parentId];
+        
+    if (value < parent.value) {
+      parent.left = newNodeId;
+        } else {
+      parent.right = newNodeId;
+    }
+  }
+  
+  // Red-Black tree özelliklerini koru
+  fixRedBlackInsertion(tree, newNodeId);
+};
+
+// Red-Black tree ekleme sonrası düzeltme
+const fixRedBlackInsertion = (tree: RedBlackTree, nodeId: number): void => {
+    let currentId = nodeId;
+  
+  // Kök değilse ve ebeveyn kırmızı ise düzeltme gerekiyor
+    while (currentId !== tree.root && 
+         tree.nodes[currentId].parent !== null && 
+         tree.nodes[tree.nodes[currentId].parent!].color === 'red') {
+    
+    const parentId = tree.nodes[currentId].parent!;
+    const parent = tree.nodes[parentId];
+    const grandparentId = parent.parent;
+    
+    if (grandparentId === null) break;
+      
+      const grandparent = tree.nodes[grandparentId];
+      
+    // Ebeveyn büyükebeveynin sol çocuğu mu?
+    if (grandparent.left === parentId) {
+      const uncleId = grandparent.right;
+      
+      // Case 1: Amca kırmızı - Renk değiştir
+      if (uncleId !== null && tree.nodes[uncleId].color === 'red') {
+        parent.color = 'black';
+        tree.nodes[uncleId].color = 'black';
+        grandparent.color = 'red';
+        currentId = grandparentId;
       } else {
-        parentNode.right = newNodeId;
+        // Case 2: Sağ çocuk ise sol rotasyon (LR durumu)
+        if (parent.right === currentId) {
+          currentId = parentId;
+          rotateLeft(tree, currentId);
+        }
+        
+        // Case 3: Sol çocuk - sağ rotasyon (LL durumu)
+        const newParentId = tree.nodes[currentId].parent!;
+        const newParent = tree.nodes[newParentId];
+        const newGrandparentId = newParent.parent!;
+        
+        newParent.color = 'black';
+        tree.nodes[newGrandparentId].color = 'red';
+        rotateRight(tree, newGrandparentId);
+      }
+    } else {
+      // Ebeveyn büyükebeveynin sağ çocuğu
+      const uncleId = grandparent.left;
+      
+      // Case 1: Amca kırmızı - Renk değiştir
+      if (uncleId !== null && tree.nodes[uncleId].color === 'red') {
+        parent.color = 'black';
+        tree.nodes[uncleId].color = 'black';
+        grandparent.color = 'red';
+        currentId = grandparentId;
+      } else {
+        // Case 2: Sol çocuk ise sağ rotasyon (RL durumu)
+        if (parent.left === currentId) {
+          currentId = parentId;
+          rotateRight(tree, currentId);
+        }
+        
+        // Case 3: Sağ çocuk - sol rotasyon (RR durumu)
+        const newParentId = tree.nodes[currentId].parent!;
+        const newParent = tree.nodes[newParentId];
+        const newGrandparentId = newParent.parent!;
+        
+        newParent.color = 'black';
+      tree.nodes[newGrandparentId].color = 'red';
+        rotateLeft(tree, newGrandparentId);
+      }
+    }
+  }
+  
+  // Kök her zaman siyah
+    if (tree.root !== null) {
+      tree.nodes[tree.root].color = 'black';
+    }
+  };
+
+  // Sol rotasyon
+const rotateLeft = (tree: RedBlackTree, nodeId: number): void => {
+    const node = tree.nodes[nodeId];
+    const rightChildId = node.right;
+    
+    if (rightChildId === null) return;
+    
+    const rightChild = tree.nodes[rightChildId];
+    
+    // Sağ çocuğun sol alt ağacını düğümün sağ alt ağacı yap
+    node.right = rightChild.left;
+    if (rightChild.left !== null) {
+      tree.nodes[rightChild.left].parent = nodeId;
+    }
+    
+    // Sağ çocuğun ebeveynini düğümün ebeveynine ayarla
+    rightChild.parent = node.parent;
+    
+    if (node.parent === null) {
+      tree.root = rightChildId;
+  } else if (tree.nodes[node.parent].left === nodeId) {
+    tree.nodes[node.parent].left = rightChildId;
+    } else {
+    tree.nodes[node.parent].right = rightChildId;
+  }
+  
+  // Düğümü sağ çocuğun sol çocuğu yap
+    rightChild.left = nodeId;
+    node.parent = rightChildId;
+  };
+
+  // Sağ rotasyon
+const rotateRight = (tree: RedBlackTree, nodeId: number): void => {
+    const node = tree.nodes[nodeId];
+    const leftChildId = node.left;
+    
+    if (leftChildId === null) return;
+    
+    const leftChild = tree.nodes[leftChildId];
+    
+    // Sol çocuğun sağ alt ağacını düğümün sol alt ağacı yap
+    node.left = leftChild.right;
+    if (leftChild.right !== null) {
+      tree.nodes[leftChild.right].parent = nodeId;
+    }
+    
+    // Sol çocuğun ebeveynini düğümün ebeveynine ayarla
+    leftChild.parent = node.parent;
+    
+    if (node.parent === null) {
+      tree.root = leftChildId;
+  } else if (tree.nodes[node.parent].right === nodeId) {
+    tree.nodes[node.parent].right = leftChildId;
+    } else {
+    tree.nodes[node.parent].left = leftChildId;
+  }
+  
+  // Düğümü sol çocuğun sağ çocuğu yap
+    leftChild.right = nodeId;
+    node.parent = leftChildId;
+};
+
+// Red-Black tree düğüm silme
+const deleteRedBlackNode = (tree: RedBlackTree, value: number): boolean => {
+  // Silinecek düğümü bul
+  const nodeToDelete = tree.nodes.find(node => node.value === value && !node.highlighted);
+  if (!nodeToDelete) {
+    return false;
+  }
+  
+  let replacementNodeId: number | null = null;
+  let deletedColor: 'red' | 'black' = nodeToDelete.color;
+  
+  if (nodeToDelete.left === null) {
+    // Sol çocuk yok
+    replacementNodeId = nodeToDelete.right;
+    transplant(tree, nodeToDelete.id, nodeToDelete.right);
+  } else if (nodeToDelete.right === null) {
+    // Sağ çocuk yok
+    replacementNodeId = nodeToDelete.left;
+    transplant(tree, nodeToDelete.id, nodeToDelete.left);
+    } else {
+    // İki çocuk var - successor'ı bul
+    const successorId = findMinimum(tree, nodeToDelete.right);
+    const successor = tree.nodes[successorId];
+    deletedColor = successor.color;
+    replacementNodeId = successor.right;
+    
+    if (successor.parent === nodeToDelete.id) {
+      if (replacementNodeId !== null) {
+        tree.nodes[replacementNodeId].parent = successorId;
+      }
+    } else {
+      transplant(tree, successorId, successor.right);
+      successor.right = nodeToDelete.right;
+      if (successor.right !== null) {
+        tree.nodes[successor.right].parent = successorId;
       }
     }
     
-    // Düğümü ekle
-    nodes.push(newNode);
+    transplant(tree, nodeToDelete.id, successorId);
+    successor.left = nodeToDelete.left;
+    if (successor.left !== null) {
+      tree.nodes[successor.left].parent = successorId;
+    }
+    successor.color = nodeToDelete.color;
   }
   
-  // Kırmızı-Siyah ağaç kurallarını uygula
-  ensureRedBlackRules(nodes);
+  // Düğümü sil (highlight olarak işaretle)
+  nodeToDelete.highlighted = true;
   
-  return {
-    root: 0,
-    nodes: nodes
-  };
+  // Eğer silinen düğüm siyahsa dengeleme gerekir
+  if (deletedColor === 'black' && replacementNodeId !== null) {
+    fixRedBlackDeletion(tree, replacementNodeId);
+  }
+  
+  return true;
 };
 
-// Kırmızı-Siyah Ağaç kurallarını uygulama
-const ensureRedBlackRules = (nodes: TreeNode[]): void => {
-  // Kural 2: Kök düğüm her zaman siyahtır
-  if (nodes.length > 0) {
-    nodes[0].color = 'black';
+// Alt ağaç değiştirme
+const transplant = (tree: RedBlackTree, uId: number, vId: number | null): void => {
+  const u = tree.nodes[uId];
+  
+  if (u.parent === null) {
+    tree.root = vId;
+  } else if (tree.nodes[u.parent].left === uId) {
+    tree.nodes[u.parent].left = vId;
+    } else {
+    tree.nodes[u.parent].right = vId;
   }
   
-  // Kural 4: Kırmızı düğümlerin tüm çocukları siyahtır
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (node.color === 'red') {
-      const parentId = node.parent;
-      if (parentId !== null && nodes[parentId].color === 'red') {
-        // Ebeveyn kırmızıysa, bu düğümü siyah yap
-        node.color = 'black';
+  if (vId !== null) {
+    tree.nodes[vId].parent = u.parent;
+  }
+};
+
+// Minimum değeri bul
+const findMinimum = (tree: RedBlackTree, nodeId: number): number => {
+  let currentId = nodeId;
+  while (tree.nodes[currentId].left !== null) {
+    currentId = tree.nodes[currentId].left!;
+  }
+  return currentId;
+};
+
+// Red-Black tree silme sonrası düzeltme
+const fixRedBlackDeletion = (tree: RedBlackTree, nodeId: number): void => {
+  let currentId = nodeId;
+  
+  while (currentId !== tree.root && tree.nodes[currentId].color === 'black') {
+    const parentId = tree.nodes[currentId].parent!;
+    
+    if (tree.nodes[parentId].left === currentId) {
+      // Sol çocuk
+      let siblingId = tree.nodes[parentId].right!;
+      let sibling = tree.nodes[siblingId];
+      
+      // Case 1: Kardeş kırmızı
+      if (sibling.color === 'red') {
+        sibling.color = 'black';
+        tree.nodes[parentId].color = 'red';
+        rotateLeft(tree, parentId);
+        siblingId = tree.nodes[parentId].right!;
+        sibling = tree.nodes[siblingId];
+      }
+      
+      // Case 2: Kardeş siyah, her iki çocuğu da siyah
+      const siblingLeftColor = sibling.left === null ? 'black' : tree.nodes[sibling.left].color;
+      const siblingRightColor = sibling.right === null ? 'black' : tree.nodes[sibling.right].color;
+      
+      if (siblingLeftColor === 'black' && siblingRightColor === 'black') {
+        sibling.color = 'red';
+        currentId = parentId;
+      } else {
+        // Case 3: Kardeş siyah, sol çocuk kırmızı, sağ çocuk siyah
+        if (siblingRightColor === 'black') {
+          if (sibling.left !== null) {
+            tree.nodes[sibling.left].color = 'black';
+          }
+          sibling.color = 'red';
+          rotateRight(tree, siblingId);
+          siblingId = tree.nodes[parentId].right!;
+          sibling = tree.nodes[siblingId];
+        }
+        
+        // Case 4: Kardeş siyah, sağ çocuk kırmızı
+        sibling.color = tree.nodes[parentId].color;
+        tree.nodes[parentId].color = 'black';
+        if (sibling.right !== null) {
+          tree.nodes[sibling.right].color = 'black';
+        }
+        rotateLeft(tree, parentId);
+        currentId = tree.root!;
+      }
+    } else {
+      // Sağ çocuk (simetrik durumlar)
+      let siblingId = tree.nodes[parentId].left!;
+      let sibling = tree.nodes[siblingId];
+      
+      if (sibling.color === 'red') {
+        sibling.color = 'black';
+        tree.nodes[parentId].color = 'red';
+        rotateRight(tree, parentId);
+        siblingId = tree.nodes[parentId].left!;
+        sibling = tree.nodes[siblingId];
+      }
+      
+      const siblingLeftColor = sibling.left === null ? 'black' : tree.nodes[sibling.left].color;
+      const siblingRightColor = sibling.right === null ? 'black' : tree.nodes[sibling.right].color;
+      
+      if (siblingLeftColor === 'black' && siblingRightColor === 'black') {
+        sibling.color = 'red';
+        currentId = parentId;
+      } else {
+        if (siblingLeftColor === 'black') {
+          if (sibling.right !== null) {
+            tree.nodes[sibling.right].color = 'black';
+          }
+          sibling.color = 'red';
+          rotateLeft(tree, siblingId);
+          siblingId = tree.nodes[parentId].left!;
+          sibling = tree.nodes[siblingId];
+        }
+        
+        sibling.color = tree.nodes[parentId].color;
+        tree.nodes[parentId].color = 'black';
+        if (sibling.left !== null) {
+          tree.nodes[sibling.left].color = 'black';
+        }
+        rotateRight(tree, parentId);
+        currentId = tree.root!;
       }
     }
   }
   
-  // Kural 3: Tüm yaprak düğümler siyahtır
-  // Not: Bu kural teoride NULL (nil) düğümler içindir, uygulamada gerçek düğümlerle ilgilenmiyoruz
-  // Ama yaprak düğümleri (çocuğu olmayan düğüm) siyah yapalım
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (node.left === null && node.right === null) {
-      node.color = 'black';
+  tree.nodes[currentId].color = 'black';
+};
+
+// Red-Black tree özelliklerini doğrula
+const validateRedBlackProperties = (tree: RedBlackTree): string[] => {
+  const violations: string[] = [];
+  
+  if (tree.root === null) return violations;
+  
+  // Kural 2: Kök siyah mı?
+  if (tree.nodes[tree.root].color !== 'black') {
+    violations.push('Kök düğüm siyah değil!');
+  }
+  
+  // Kural 4: Kırmızı düğümlerin çocukları siyah mı?
+  for (const node of tree.nodes) {
+    if (node.highlighted) continue;
+    
+    if (node.color === 'red') {
+      if (node.left !== null && tree.nodes[node.left].color === 'red') {
+        violations.push(`Kırmızı düğüm ${node.value} kırmızı sol çocuğa sahip!`);
+      }
+      if (node.right !== null && tree.nodes[node.right].color === 'red') {
+        violations.push(`Kırmızı düğüm ${node.value} kırmızı sağ çocuğa sahip!`);
+      }
     }
   }
   
-  // Kural 5: Her yolda eşit sayıda siyah düğüm olmalı
-  balanceBlackNodes(nodes, 0);
-};
-
-// Her yolu dengelemek için yardımcı fonksiyon
-const balanceBlackNodes = (nodes: TreeNode[], rootId: number): number => {
-  if (rootId === null) return 1; // NULL düğümler siyah sayılır
+  // Kural 5: Siyah yükseklik kontrolü
+  const blackHeights = new Set<number>();
+  const checkBlackHeight = (nodeId: number | null, blackCount: number): void => {
+    if (nodeId === null) {
+      blackHeights.add(blackCount);
+      return;
+    }
+    
+    const node = tree.nodes[nodeId];
+    if (node.highlighted) return;
+    
+    const newCount = node.color === 'black' ? blackCount + 1 : blackCount;
+    checkBlackHeight(node.left, newCount);
+    checkBlackHeight(node.right, newCount);
+  };
   
-  const node = nodes[rootId];
+  checkBlackHeight(tree.root, 0);
   
-  // Yaprak düğümse, siyah sayısını döndür
-  if (node.left === null && node.right === null) {
-    return node.color === 'black' ? 1 : 0;
+  if (blackHeights.size > 1) {
+    violations.push('Farklı yollarda farklı sayıda siyah düğüm var!');
   }
   
-  // Sol ve sağ alt ağaçların siyah yüksekliklerini hesapla
-  const leftBlackHeight = node.left !== null ? balanceBlackNodes(nodes, node.left) : 1;
-  const rightBlackHeight = node.right !== null ? balanceBlackNodes(nodes, node.right) : 1;
-  
-  // Eğer dengeli değilse, düğümü siyah yaparak dengeyi sağla
-  if (leftBlackHeight !== rightBlackHeight) {
-    node.color = 'black';
-  }
-  
-  // Bu düğümün siyah yüksekliğini döndür
-  return node.color === 'black' ? Math.max(leftBlackHeight, rightBlackHeight) + 1 : Math.max(leftBlackHeight, rightBlackHeight);
+  return violations;
 };
 
 const TreeVisualization: React.FC<TreeVisualizationProps> = ({
@@ -192,13 +728,26 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
   customTree,
   animationSpeed = DEFAULT_ANIMATION_SPEED
 }) => {
-  // Durumlar
-  const [tree, setTree] = useState<RedBlackTree>(customTree || createSampleRedBlackTree());
+  // AVL ağacı mı yoksa Red-Black ağaç mı kontrol et
+  const isAVLTree = algorithmType.toLowerCase().includes('avl');
+  
+  // Durumlar - algoritma tipine göre uygun ağaç türü
+  const [tree, setTree] = useState<RedBlackTree | AVLTree>(() => {
+    if (customTree) {
+      return customTree;
+    }
+    return isAVLTree ? createSampleAVLTree() : createSampleRedBlackTree();
+  });
+  
   const [processing, setProcessing] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [totalSteps, setTotalSteps] = useState<number>(0);
   const [speed, setSpeed] = useState<number>(animationSpeed);
-  const [explanationText, setExplanationText] = useState<string>('Kırmızı-Siyah Ağaç görselleştirmesi. Başlatmak için "Yapı Göster" düğmesine tıklayın.');
+  const [explanationText, setExplanationText] = useState<string>(() => {
+    return isAVLTree 
+      ? 'AVL Ağacı görselleştirmesi. Başlatmak için "Yapı Göster" düğmesine tıklayın.'
+      : 'Kırmızı-Siyah Ağaç görselleştirmesi. Başlatmak için "Yapı Göster" düğmesine tıklayın.';
+  });
   const [operationValue, setOperationValue] = useState<string>('');
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -208,15 +757,18 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
   // Ağaç yapısını sıfırla ve yeni bir ağaç oluştur
   const resetTree = () => {
     if (processing) return;
-    const newTree = createSampleRedBlackTree();
+    const newTree = isAVLTree ? createSampleAVLTree() : createSampleRedBlackTree();
     setTree(newTree);
     setCurrentStep(0);
     setTotalSteps(0);
-    setExplanationText('Kırmızı-Siyah Ağaç görselleştirmesi. Başlatmak için "Yapı Göster" düğmesine tıklayın.');
+    const defaultText = isAVLTree 
+      ? 'AVL Ağacı görselleştirmesi. Başlatmak için "Yapı Göster" düğmesine tıklayın.'
+      : 'Kırmızı-Siyah Ağaç görselleştirmesi. Başlatmak için "Yapı Göster" düğmesine tıklayın.';
+    setExplanationText(defaultText);
     calculateNodePositions(newTree);
   };
 
-  // İkili arama ağacı yaratma ve düğüm ekleme
+  // Düğüm ekleme - algoritma tipine göre uygun fonksiyonu çağır
   const insertNode = async () => {
     if (processing || !operationValue) return;
     setProcessing(true);
@@ -228,818 +780,282 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
       return;
     }
     
-    setExplanationText(`${value} değeri ağaca ekleniyor...`);
+    if (isAVLTree) {
+      await insertAVLNodeWithAnimation(value);
+    } else {
+      await insertRedBlackNodeWithAnimation(value);
+    }
     
-    // Yeni ağaç durumunu oluştur
-    const newTree = JSON.parse(JSON.stringify(tree)) as RedBlackTree;
+    setOperationValue('');
+    setProcessing(false);
+  };
+
+  // AVL ağacına animasyonlu düğüm ekleme
+  const insertAVLNodeWithAnimation = async (value: number) => {
+    setExplanationText(`AVL Ağacına ${value} değeri ekleniyor...`);
+    await wait(speed);
     
-    // Yeni düğüm oluştur
+    const avlTree = tree as AVLTree;
+    
+    // Değer zaten var mı kontrol et
+    const existingNode = avlTree.nodes.find(node => node.value === value && !node.highlighted);
+    if (existingNode) {
+      setExplanationText(`${value} değeri zaten ağaçta bulunuyor.`);
+      return;
+    }
+    
+    const newTree = JSON.parse(JSON.stringify(avlTree)) as AVLTree;
+    
+    // Ekleme öncesi durumu göster
+    setExplanationText(`${value} için uygun pozisyon aranıyor...`);
+        await wait(speed);
+        
+    // Düğümü ekle
     const newNodeId = newTree.nodes.length;
-    const newNode: TreeNode = {
+    const newNode: AVLTreeNode = {
       id: newNodeId,
       value: value,
-      color: 'red', // Yeni düğümler kırmızı başlar
+      height: 1,
+      balanceFactor: 0,
       left: null,
       right: null,
       parent: null
     };
     
-    // Ağaca ekle
-    let insertPosition: number | null = null;
-    let isLeftChild = false;
-    
-    if (newTree.root === null) {
-      // Ağaç boşsa, kök olarak ekle
-      newTree.root = newNodeId;
-      newNode.color = 'black'; // Kök düğüm siyah olur
-    } else {
-      // Standart BST eklemesi
-      let currentId: number | null = newTree.root;
-      let parentId: number | null = null;
-      
-      while (currentId !== null) {
-        parentId = currentId;
-        const current = newTree.nodes[currentId];
-        
-        if (value < current.value) {
-          currentId = current.left;
-          isLeftChild = true;
-        } else if (value > current.value) {
-          currentId = current.right;
-          isLeftChild = false;
-        } else {
-          // Değer zaten ağaçta var
-          setExplanationText(`${value} değeri zaten ağaçta bulunuyor.`);
-          setProcessing(false);
-          return;
-        }
-      }
-      
-      // Ebeveyn düğüme bağla
-      if (parentId !== null) {
-        newNode.parent = parentId;
-        
-        if (isLeftChild) {
-          newTree.nodes[parentId].left = newNodeId;
-        } else {
-          newTree.nodes[parentId].right = newNodeId;
-        }
-        
-        insertPosition = parentId;
-      }
-    }
-    
-    // Düğümü ekle
     newTree.nodes.push(newNode);
     
-    // Düğüm eklemeden önceki görünümü göster
+    if (newTree.root === null) {
+      newTree.root = newNodeId;
+      setTree(newTree);
+      calculateNodePositions(newTree);
+      setExplanationText(`${value} değeri kök düğüm olarak eklendi.`);
+      return;
+    }
+    
+    // BST ekleme
+    let currentId: number | null = newTree.root;
+    let parentId: number | null = null;
+    
+    while (currentId !== null) {
+      parentId = currentId;
+      const current: AVLTreeNode = newTree.nodes[currentId];
+      
+      // Mevcut düğümü vurgula
+      current.highlighted = true;
+      setTree({...newTree});
+      calculateNodePositions(newTree);
+      setExplanationText(`${value} ile ${current.value} karşılaştırılıyor...`);
+        await wait(speed);
+      current.highlighted = false;
+      
+      if (value < current.value) {
+        setExplanationText(`${value} < ${current.value}, sol tarafa gidiliyor...`);
+        currentId = current.left;
+      } else {
+        setExplanationText(`${value} > ${current.value}, sağ tarafa gidiliyor...`);
+        currentId = current.right;
+      }
+        await wait(speed / 2);
+    }
+    
+    // Yeni düğümü bağla
+    if (parentId !== null) {
+      newNode.parent = parentId;
+      const parent: AVLTreeNode = newTree.nodes[parentId];
+      
+      if (value < parent.value) {
+        parent.left = newNodeId;
+        setExplanationText(`${value} değeri ${parent.value}'in sol çocuğu olarak eklendi.`);
+      } else {
+        parent.right = newNodeId;
+        setExplanationText(`${value} değeri ${parent.value}'in sağ çocuğu olarak eklendi.`);
+      }
+    }
+    
+    // Ağacı güncelle ve göster
+    setTree(newTree);
     calculateNodePositions(newTree);
-    setTree({...newTree});
     await wait(speed);
     
-    // Kırmızı-Siyah Ağaç özelliklerini korumak için dengeleme
-    if (newNode.color === 'red' && newNode.parent !== null) {
-      setExplanationText(`${value} değeri eklendi, ağaç dengeleniyor...`);
-      await fixTreeAfterInsertion(newTree, newNodeId);
-    }
-    
-    // Ağacı güncelle
-    calculateNodePositions(newTree);
+    // Yükseklikleri güncelle
+    setExplanationText('Yükseklikler ve balance factor\'lar güncelleniyor...');
+    updateHeightsAndBalance(newTree, parentId);
     setTree({...newTree});
-    setOperationValue('');
-    setProcessing(false);
-    setExplanationText(`${value} değeri başarıyla eklendi ve ağaç dengelendi.`);
-    
-    verifyRedBlackProperties(newTree);
-  };
-
-  // Ekleme sonrası ağaç dengeleme
-  const fixTreeAfterInsertion = async (tree: RedBlackTree, nodeId: number): Promise<void> => {
-    let currentId = nodeId;
-    let parentId: number | null = tree.nodes[currentId].parent;
-    
-    // Adım 1: Eğer düğüm kök ise siyaha boya ve çık
-    if (parentId === null) {
-      tree.nodes[currentId].color = 'black';
-      calculateNodePositions(tree);
-      setTree({...tree});
-      return;
-    }
-    
-    // Adım 2: Ebeveyn siyahsa hiçbir şey yapma (kural zaten sağlanıyor)
-    if (tree.nodes[parentId].color === 'black') {
-      return;
-    }
-    
-    // Düğüm kırmızı ve ebeveyni de kırmızı ise dengeleme gerekiyor
-    while (currentId !== tree.root && 
-           parentId !== null && 
-           tree.nodes[parentId].color === 'red') {
-      
-      // Büyükebeveyni bul
-      const grandparentId = tree.nodes[parentId].parent;
-      
-      // Eğer büyükebevey yoksa (imkansız, çünkü parent kırmızı ve kök siyah olmalı)
-      if (grandparentId === null) {
-        tree.nodes[parentId].color = 'black';
-        break;
-      }
-      
-      const grandparent = tree.nodes[grandparentId];
-      
-      // Amcayı bul - büyükebeveynin diğer çocuğu
-      const parentIsLeftChild = grandparent.left === parentId;
-      const uncleId = parentIsLeftChild ? grandparent.right : grandparent.left;
-      
-      // Adım 3: Amca kırmızı ise, renk değişimi yap
-      if (uncleId !== null && tree.nodes[uncleId].color === 'red') {
-        setExplanationText('Durum 1: Amca kırmızı - Renk değiştiriliyor');
-        
-        // Ebeveyni ve amcayı siyah yap
-        tree.nodes[parentId].color = 'black';
-        tree.nodes[uncleId].color = 'black';
-        
-        // Büyükebeveyni kırmızı yap
-        tree.nodes[grandparentId].color = 'red';
-        
-        // Değişiklikleri göster
-        calculateNodePositions(tree);
-        setTree({...tree});
+    calculateNodePositions(newTree);
         await wait(speed);
         
-        // Büyükebeveyni kontrol etmek için yukarı çık
-        currentId = grandparentId;
-        parentId = tree.nodes[currentId].parent;
-        continue;
-      }
-      
-      // Adım 4 ve 5: Amca siyah veya null
-      
-      // Adım 4: Current, parent'in iç düğümü ise rotasyon ile düzelt
-      const isCurrentLeftChild = tree.nodes[parentId].left === currentId;
-      
-      if (parentIsLeftChild && !isCurrentLeftChild) {
-        // LR durumu: Sol-Sağ rotasyon
-        setExplanationText('Durum 2: LR durumu - Sol rotasyon yapılıyor');
-        
-        // Sol rotasyon
-        await leftRotate(tree, parentId);
-        
-        // Düzeltme sonrası pozisyonları güncelle
-        currentId = tree.nodes[currentId].left as number;
-      } 
-      else if (!parentIsLeftChild && isCurrentLeftChild) {
-        // RL durumu: Sağ-Sol rotasyon
-        setExplanationText('Durum 2: RL durumu - Sağ rotasyon yapılıyor');
-        
-        // Sağ rotasyon
-        await rightRotate(tree, parentId);
-        
-        // Düzeltme sonrası pozisyonları güncelle
-        currentId = tree.nodes[currentId].right as number;
-      }
-      
-      // Referansları güncelle
-      parentId = tree.nodes[currentId].parent;
-      if (parentId === null) break;
-      
-      const newGrandparentId = tree.nodes[parentId].parent;
-      if (newGrandparentId === null) break;
-      
-      // Adım 5: Final renk değişimi ve rotasyon
-      setExplanationText('Durum 3: Final renk değişimi ve rotasyon');
-      
-      // Renk değişimi
-      tree.nodes[parentId].color = 'black';
-      tree.nodes[newGrandparentId].color = 'red';
-      
-      // Büyükebevey etrafında rotasyon
-      if (tree.nodes[newGrandparentId].left === parentId) {
-        // LL durumu
-        await rightRotate(tree, newGrandparentId);
-      } else {
-        // RR durumu
-        await leftRotate(tree, newGrandparentId);
-      }
-      
-      // Değişiklikleri göster
-      calculateNodePositions(tree);
-      setTree({...tree});
-      await wait(speed);
-      
-      // Rotasyon ve renk değişiminden sonra tamamlandı
-      break;
-    }
+    // AVL dengeleme kontrolü
+    setExplanationText('AVL dengeleme kuralları kontrol ediliyor...');
+    await rebalanceAVLWithAnimation(newTree, parentId);
     
-    // Son kural: Kök her zaman siyah olmalı
-    if (tree.root !== null) {
-      tree.nodes[tree.root].color = 'black';
-    }
-    
-    // Ağaç yapısındaki değişiklikleri görüntüle
-    calculateNodePositions(tree);
-    setTree({...tree});
+    setTree(newTree);
+    calculateNodePositions(newTree);
+    setExplanationText(`${value} değeri başarıyla eklendi ve ağaç dengelendi.`);
   };
 
-  // Sol rotasyon
-  const leftRotate = async (tree: RedBlackTree, nodeId: number) => {
-    const node = tree.nodes[nodeId];
+  // AVL dengeleme animasyonlu
+  const rebalanceAVLWithAnimation = async (tree: AVLTree, nodeId: number | null): Promise<void> => {
+    if (nodeId === null) return;
+    
+    const node: AVLTreeNode = tree.nodes[nodeId];
+    
+    // Balance factor'ı göster
+    node.highlighted = true;
+    setTree({...tree});
+    calculateNodePositions(tree);
+    setExplanationText(`Düğüm ${node.value}: Yükseklik=${node.height}, Balance Factor=${node.balanceFactor}`);
+      await wait(speed);
+    node.highlighted = false;
+    
+    // Balance factor kontrolü
+    if (Math.abs(node.balanceFactor) > 1) {
+      setExplanationText(`Düğüm ${node.value} dengesiz! Balance factor: ${node.balanceFactor}. Rotasyon gerekiyor...`);
+      await wait(speed);
+      
+      if (node.balanceFactor > 1) {
+        // Sol ağır
+        const leftChild = node.left !== null ? tree.nodes[node.left] : null;
+        if (leftChild && leftChild.balanceFactor < 0) {
+          // LR durumu
+          setExplanationText('LR Durumu: Sol-Sağ rotasyon gerekiyor...');
+          await wait(speed);
+          if (node.left !== null) {
+            await leftRotateAVLWithAnimation(tree, node.left);
+          }
+        }
+        // LL durumu
+        setExplanationText('LL Durumu: Sağ rotasyon yapılıyor...');
+        await wait(speed);
+        await rightRotateAVLWithAnimation(tree, nodeId);
+      } else {
+        // Sağ ağır  
+        const rightChild = node.right !== null ? tree.nodes[node.right] : null;
+        if (rightChild && rightChild.balanceFactor > 0) {
+          // RL durumu
+          setExplanationText('RL Durumu: Sağ-Sol rotasyon gerekiyor...');
+          await wait(speed);
+          if (node.right !== null) {
+            await rightRotateAVLWithAnimation(tree, node.right);
+          }
+        }
+        // RR durumu
+        setExplanationText('RR Durumu: Sol rotasyon yapılıyor...');
+        await wait(speed);
+        await leftRotateAVLWithAnimation(tree, nodeId);
+      }
+    }
+    
+    // Ebeveyne doğru devam et
+    await rebalanceAVLWithAnimation(tree, node.parent);
+  };
+
+  // AVL sol rotasyon animasyonlu
+  const leftRotateAVLWithAnimation = async (tree: AVLTree, nodeId: number): Promise<void> => {
+    const node: AVLTreeNode = tree.nodes[nodeId];
     const rightChildId = node.right;
     
     if (rightChildId === null) return;
     
-    const rightChild = tree.nodes[rightChildId];
+    const rightChild: AVLTreeNode = tree.nodes[rightChildId];
     
-    // Sağ çocuğun sol alt ağacını düğümün sağ alt ağacı yap
-    node.right = rightChild.left;
-    
-    // Sağ çocuğun sol çocuğunun ebeveynini güncelle
-    if (rightChild.left !== null) {
-      tree.nodes[rightChild.left].parent = nodeId;
-    }
-    
-    // Sağ çocuğun ebeveynini düğümün ebeveynine ayarla
-    rightChild.parent = node.parent;
-    
-    if (node.parent === null) {
-      // Düğüm kökse, yeni kök sağ çocuk olur
-      tree.root = rightChildId;
-    } else {
-      // Düğümün ebeveyninin çocuk referansını güncelle
-      const parent = tree.nodes[node.parent];
-      if (node.parent !== null && parent.left === nodeId) {
-        parent.left = rightChildId;
-      } else if (node.parent !== null) {
-        parent.right = rightChildId;
-      }
-    }
-    
-    // Sağ çocuğun sol çocuğunu düğüm yap
-    rightChild.left = nodeId;
-    // Düğümün ebeveynini sağ çocuk yap
-    node.parent = rightChildId;
-    
-    // Pozisyonları güncelle
-    calculateNodePositions(tree);
+    // Rotasyon öncesi durumu göster
+    node.highlighted = true;
+    rightChild.highlighted = true;
     setTree({...tree});
-    await wait(speed / 2);
+    calculateNodePositions(tree);
+    setExplanationText(`Sol rotasyon: ${node.value} ve ${rightChild.value} pozisyonları değişiyor...`);
+    await wait(speed);
+    
+    // Rotasyon işlemi
+    leftRotateAVL(tree, nodeId);
+    
+    // Rotasyon sonrası durumu göster
+    setTree({...tree});
+    calculateNodePositions(tree);
+    await wait(speed);
+    
+    // Vurguları kaldır
+    tree.nodes.forEach(n => n.highlighted = false);
+    setExplanationText('Sol rotasyon tamamlandı.');
   };
 
-  // Sağ rotasyon
-  const rightRotate = async (tree: RedBlackTree, nodeId: number) => {
-    const node = tree.nodes[nodeId];
+  // AVL sağ rotasyon animasyonlu
+  const rightRotateAVLWithAnimation = async (tree: AVLTree, nodeId: number): Promise<void> => {
+    const node: AVLTreeNode = tree.nodes[nodeId];
     const leftChildId = node.left;
     
     if (leftChildId === null) return;
     
-    const leftChild = tree.nodes[leftChildId];
+    const leftChild: AVLTreeNode = tree.nodes[leftChildId];
     
-    // Sol çocuğun sağ alt ağacını düğümün sol alt ağacı yap
-    node.left = leftChild.right;
-    
-    // Sol çocuğun sağ çocuğunun ebeveynini güncelle
-    if (leftChild.right !== null) {
-      tree.nodes[leftChild.right].parent = nodeId;
-    }
-    
-    // Sol çocuğun ebeveynini düğümün ebeveynine ayarla
-    leftChild.parent = node.parent;
-    
-    if (node.parent === null) {
-      // Düğüm kökse, yeni kök sol çocuk olur
-      tree.root = leftChildId;
-    } else {
-      // Düğümün ebeveyninin çocuk referansını güncelle
-      const parent = tree.nodes[node.parent];
-      if (node.parent !== null && parent.right === nodeId) {
-        parent.right = leftChildId;
-      } else if (node.parent !== null) {
-        parent.left = leftChildId;
-      }
-    }
-    
-    // Sol çocuğun sağ çocuğunu düğüm yap
-    leftChild.right = nodeId;
-    // Düğümün ebeveynini sol çocuk yap
-    node.parent = leftChildId;
-    
-    // Pozisyonları güncelle
-    calculateNodePositions(tree);
+    // Rotasyon öncesi durumu göster
+    node.highlighted = true;
+    leftChild.highlighted = true;
     setTree({...tree});
-    await wait(speed / 2);
-  };
-
-  // Kırmızı-Siyah Ağaç özelliklerini kontrol et
-  const verifyRedBlackProperties = (tree: RedBlackTree) => {
-    if (tree.root === null) return true;
-    
-    let propertiesText = [];
-    let allPropertiesMet = true;
-    
-    // Özellik 1: Her düğüm ya kırmızı ya da siyahtır (veri yapısı gereği zaten sağlanır)
-    propertiesText.push("✓ Her düğüm ya kırmızı ya da siyahtır.");
-    
-    // Özellik 2: Kök düğüm siyahtır
-    if (tree.root !== null && tree.nodes[tree.root].color === 'black') {
-      propertiesText.push("✓ Kök düğüm siyahtır.");
-    } else {
-      propertiesText.push("✗ Kök düğüm siyah değil!");
-      allPropertiesMet = false;
-    }
-    
-    // Özellik 3: Kırmızı bir düğümün tüm çocukları siyah olmalıdır
-    let redNodeWithRedChild = false;
-    for (const node of tree.nodes) {
-      if (node.highlighted) continue; // Silinmiş düğümleri atla
-      
-      if (node.color === 'red') {
-        const leftChildId = node.left;
-        const rightChildId = node.right;
-        
-        if ((leftChildId !== null && tree.nodes[leftChildId].color === 'red') ||
-            (rightChildId !== null && tree.nodes[rightChildId].color === 'red')) {
-          redNodeWithRedChild = true;
-          break;
-        }
-      }
-    }
-    
-    if (!redNodeWithRedChild) {
-      propertiesText.push("✓ Kırmızı düğümlerin tüm çocukları siyahtır.");
-    } else {
-      propertiesText.push("✗ Kırmızı bir düğümün kırmızı çocuğu var!");
-      allPropertiesMet = false;
-    }
-    
-    // Özellik 4: Herhangi bir düğümden yaprak (NIL) düğümlere kadar giden herhangi bir yoldaki siyah düğüm sayısı aynıdır
-    
-    // Bu özelliği kontrol etmek için kökten başlayarak her yaprak yolu için siyah düğüm sayısını hesaplayıp 
-    // tüm yollar için aynı sayıda siyah düğüm olup olmadığını kontrol edelim
-    const blackHeights = new Set<number>();
-    
-    // Kökten yapraklara doğru siyah düğüm sayısını hesapla
-    const countBlackNodes = (nodeId: number | null, count: number): void => {
-      if (nodeId === null) {
-        // Yaprak (NIL) düğüme ulaştık, yol üzerindeki siyah düğüm sayısını kaydet
-        blackHeights.add(count + 1); // +1 çünkü NIL düğümler siyah kabul edilir
-        return;
-      }
-      
-      const node = tree.nodes[nodeId];
-      if (node.highlighted) return; // Silinmiş düğümleri atla
-      
-      // Eğer düğüm siyahsa sayacı arttır
-      const newCount = node.color === 'black' ? count + 1 : count;
-      
-      // Sol ve sağ alt ağaçlar için hesaplama yap
-      countBlackNodes(node.left, newCount);
-      countBlackNodes(node.right, newCount);
-    };
-    
-    // Kökten başlayarak tüm yolları kontrol et
-    if (tree.root !== null) {
-      countBlackNodes(tree.root, 0);
-    }
-    
-    // Eğer tüm yollarda aynı sayıda siyah düğüm varsa, blackHeights setinde sadece bir değer olmalı
-    if (blackHeights.size === 1) {
-      propertiesText.push("✓ Her yolda aynı sayıda siyah düğüm bulunur.");
-    } else {
-      propertiesText.push("✗ Bazı yollarda farklı sayıda siyah düğüm var!");
-      allPropertiesMet = false;
-    }
-    
-    if (allPropertiesMet) {
-      setExplanationText(`Ağaç Kırmızı-Siyah Ağaç özelliklerini koruyor! ${propertiesText.join(" ")}`);
-    } else {
-      setExplanationText(`Uyarı: Ağaç Kırmızı-Siyah Ağaç özelliklerini bozuyor! ${propertiesText.join(" ")}`);
-    }
-    
-    return allPropertiesMet;
-  };
-
-  // Ağaçtan bir değeri sil
-  const deleteNode = async () => {
-    if (processing || !operationValue) return;
-    setProcessing(true);
-    
-    const value = parseInt(operationValue);
-    if (isNaN(value)) {
-      setExplanationText('Lütfen geçerli bir sayı girin.');
-      setProcessing(false);
-      return;
-    }
-    
-    setExplanationText(`${value} değeri ağaçtan siliniyor...`);
+    calculateNodePositions(tree);
+    setExplanationText(`Sağ rotasyon: ${node.value} ve ${leftChild.value} pozisyonları değişiyor...`);
     await wait(speed);
     
-    // Silinecek düğümü bul
-    const newTree = JSON.parse(JSON.stringify(tree)) as RedBlackTree;
-    const nodeIndexToDelete = newTree.nodes.findIndex(node => node.value === value);
+    // Rotasyon işlemi
+    rightRotateAVL(tree, nodeId);
     
-    if (nodeIndexToDelete === -1) {
-      setExplanationText(`${value} değeri ağaçta bulunamadı.`);
-      setProcessing(false);
+    // Rotasyon sonrası durumu göster
+    setTree({...tree});
+    calculateNodePositions(tree);
+    await wait(speed);
+    
+    // Vurguları kaldır
+    tree.nodes.forEach(n => n.highlighted = false);
+    setExplanationText('Sağ rotasyon tamamlandı.');
+  };
+
+  // Red-Black Tree animasyonlu ekleme (mevcut kod)
+  const insertRedBlackNodeWithAnimation = async (value: number) => {
+    setExplanationText(`Red-Black Tree'ye ${value} değeri ekleniyor...`);
+    
+    const rbTree = tree as RedBlackTree;
+    
+    // Değer zaten var mı kontrol et
+    const existingNode = rbTree.nodes.find(node => node.value === value && !node.highlighted);
+    if (existingNode) {
+      setExplanationText(`${value} değeri zaten ağaçta bulunuyor.`);
       return;
     }
     
-    // Silme işlemini gerçekleştir
-    await deleteNodeFromTree(newTree, nodeIndexToDelete);
+    const newTree = JSON.parse(JSON.stringify(rbTree)) as RedBlackTree;
     
-    // Son olarak renk kurallarını uygula
-    ensureRedBlackProperties(newTree);
+    // Ekleme öncesi durumu göster
+    setExplanationText(`${value} için uygun pozisyon aranıyor...`);
+    await wait(speed);
     
-    // Pozisyonları güncelle
-    calculateNodePositions(newTree);
+    // Red-Black Tree ekleme algoritması
+    insertRedBlackNode(newTree, value);
     
-    // Ağacı güncelle
     setTree(newTree);
-    setOperationValue('');
-    setProcessing(false);
-    verifyRedBlackProperties(newTree);
-  };
-
-  // Ağaçtan düğüm silme işlemi
-  const deleteNodeFromTree = async (tree: RedBlackTree, nodeIndex: number) => {
-    const nodeToDelete = tree.nodes[nodeIndex];
+    calculateNodePositions(newTree);
+    setExplanationText(`${value} değeri başarıyla eklendi ve Red-Black Tree kuralları korundu.`);
     
-    // Düğümün rengi (düğüm silindikten sonra dengeleme için kullanılacak)
-    let originalColor = nodeToDelete.color;
-    
-    let replacementNodeId: number | null = null;
-    let replacementNodeParentId: number | null = null;
-    
-    // Case 1: Yaprak düğüm (hiç çocuğu yok)
-    if (nodeToDelete.left === null && nodeToDelete.right === null) {
-      replacementNodeId = null;
-      replacementNodeParentId = nodeToDelete.parent;
-      
-      // Ebeveyn bağlantısını güncelle
-      if (nodeToDelete.parent === null) {
-        // Kök düğümü siliyoruz
-        tree.root = null;
-      } else {
-        const parent = tree.nodes[nodeToDelete.parent];
-        if (parent.left === nodeIndex) {
-          parent.left = null;
-        } else {
-          parent.right = null;
-        }
-      }
-    }
-    // Case 2: Tek çocuklu düğüm
-    else if (nodeToDelete.left === null) {
-      // Sadece sağ çocuk var
-      replacementNodeId = nodeToDelete.right;
-      replacementNodeParentId = nodeToDelete.parent;
-      
-      if (replacementNodeId !== null) {
-        tree.nodes[replacementNodeId].parent = nodeToDelete.parent;
-      }
-      
-      if (nodeToDelete.parent === null) {
-        tree.root = replacementNodeId;
-      } else {
-        const parent = tree.nodes[nodeToDelete.parent];
-        if (parent.left === nodeIndex) {
-          parent.left = replacementNodeId;
-        } else {
-          parent.right = replacementNodeId;
-        }
-      }
-    } 
-    else if (nodeToDelete.right === null) {
-      // Sadece sol çocuk var
-      replacementNodeId = nodeToDelete.left;
-      replacementNodeParentId = nodeToDelete.parent;
-      
-      if (replacementNodeId !== null) {
-        tree.nodes[replacementNodeId].parent = nodeToDelete.parent;
-      }
-      
-      if (nodeToDelete.parent === null) {
-        tree.root = replacementNodeId;
-      } else {
-        const parent = tree.nodes[nodeToDelete.parent];
-        if (parent.left === nodeIndex) {
-          parent.left = replacementNodeId;
-        } else {
-          parent.right = replacementNodeId;
-        }
-      }
-    }
-    // Case 3: İki çocuklu düğüm
-    else {
-      // Successor'ı bul (sağ alt ağacın en sol düğümü)
-      setExplanationText(`İki çocuklu düğüm siliniyor. Successor (halef) düğüm aranıyor...`);
-      await wait(speed);
-      
-      let successorId = nodeToDelete.right;
-      let successor = tree.nodes[successorId];
-      
-      while (successor.left !== null) {
-        successorId = successor.left;
-        successor = tree.nodes[successorId];
-      }
-      
-      // Successor'ın rengini hatırla
-      originalColor = successor.color;
-      
-      // Successor'ın sağ çocuğunu (olabilir veya olmayabilir)
-      replacementNodeId = successor.right;
-      
-      if (successor.parent === nodeIndex) {
-        // Successor, silinecek düğümün doğrudan sağ çocuğu ise
-        replacementNodeParentId = successorId;
-        
-        if (replacementNodeId !== null) {
-          tree.nodes[replacementNodeId].parent = successorId;
-        }
-      } else {
-        // Successor, daha derinde bir düğüm ise
-        replacementNodeParentId = successor.parent;
-        
-        if (replacementNodeParentId !== null) {
-          // Successor'ın ebeveyninin sol bağlantısını güncelle
-          tree.nodes[replacementNodeParentId].left = successor.right;
-          
-          if (successor.right !== null) {
-            tree.nodes[successor.right].parent = replacementNodeParentId;
-          }
-        }
-        
-        // Successor'ı silinecek düğümün yerine koy - sağ bağlantıyı güncelle
-        successor.right = nodeToDelete.right;
-        if (nodeToDelete.right !== null) {
-          tree.nodes[nodeToDelete.right].parent = successorId;
-        }
-      }
-      
-      // Successor'ı silinecek düğümün yerine koy
-      if (nodeToDelete.parent === null) {
-        tree.root = successorId;
-      } else {
-        const parent = tree.nodes[nodeToDelete.parent];
-        if (parent.left === nodeIndex) {
-          parent.left = successorId;
-        } else {
-          parent.right = successorId;
-        }
-      }
-      
-      // Successor'ın sol bağlantısını ve rengini güncelle
-      successor.left = nodeToDelete.left;
-      if (nodeToDelete.left !== null) {
-        tree.nodes[nodeToDelete.left].parent = successorId;
-      }
-      successor.color = nodeToDelete.color;
-      successor.parent = nodeToDelete.parent;
-    }
-    
-    // Eğer silinen veya taşınan düğüm siyahsa, dengeleme gerekir
-    if (originalColor === 'black' && replacementNodeId !== null) {
-      setExplanationText('Siyah düğüm silindi, ağaç dengeleniyor...');
-      await wait(speed);
-      
-      await fixTreeAfterDeletion(tree, replacementNodeId, replacementNodeParentId);
-    }
-    
-    // Düğümü işaretle (görünmez yap)
-    tree.nodes[nodeIndex].highlighted = true;
-    
-    setExplanationText(`${nodeToDelete.value} değeri başarıyla silindi.`);
-  };
-
-  // Silme sonrası ağaç dengeleme
-  const fixTreeAfterDeletion = async (tree: RedBlackTree, nodeId: number | null, parentId: number | null) => {
-    if (tree.root === null) return;
-    
-    let currentNodeId = nodeId;
-    let currentParentId = parentId;
-    
-    // Eğer düğüm null veya kök ise işlemi sonlandır
-    if (currentNodeId === tree.root || currentNodeId === null || currentParentId === null) {
-      if (currentNodeId !== null) {
-        tree.nodes[currentNodeId].color = 'black';
-      }
-      return;
-    }
-    
-    // Ekstra siyah özelliği giderilene kadar devam et
-    while (currentNodeId !== tree.root && 
-           (currentNodeId === null || 
-            (currentNodeId !== null && tree.nodes[currentNodeId].color === 'black'))) {
-      
-      if (currentParentId === null) break;
-      
-      const parent = tree.nodes[currentParentId];
-      const isLeftChild = parent.left === currentNodeId;
-      
-      // Kardeş düğümü bul
-      let siblingId = isLeftChild ? parent.right : parent.left;
-      
-      if (siblingId === null) break;
-      
-      const sibling = tree.nodes[siblingId];
-      
-      // Case 1: Kardeş kırmızıysa
-      if (sibling.color === 'red') {
-        setExplanationText('Case 1: Kardeş düğüm kırmızı, renkler değiştiriliyor ve rotasyon yapılıyor.');
-        await wait(speed);
-        
-        sibling.color = 'black';
-        parent.color = 'red';
-        
-        if (isLeftChild) {
-          await leftRotate(tree, currentParentId);
-          // Rotasyon sonrası kardeşi güncelle
-          siblingId = parent.right;
-        } else {
-          await rightRotate(tree, currentParentId);
-          // Rotasyon sonrası kardeşi güncelle
-          siblingId = parent.left;
-        }
-        
-        if (siblingId === null) break;
-      }
-      
-      // Kardeşin çocuklarını kontrol et
-      const siblingLeftChildId = tree.nodes[siblingId].left;
-      const siblingRightChildId = tree.nodes[siblingId].right;
-      
-      const siblingLeftChildColor = siblingLeftChildId === null ? 'black' : tree.nodes[siblingLeftChildId].color;
-      const siblingRightChildColor = siblingRightChildId === null ? 'black' : tree.nodes[siblingRightChildId].color;
-      
-      // Case 2: Kardeş siyah ve her iki çocuğu da siyah
-      if (siblingLeftChildColor === 'black' && siblingRightChildColor === 'black') {
-        setExplanationText('Case 2: Kardeş siyah ve her iki çocuğu da siyah, kardeş kırmızı yapılıyor.');
-        await wait(speed);
-        
-        tree.nodes[siblingId].color = 'red';
-        currentNodeId = currentParentId;
-        currentParentId = tree.nodes[currentNodeId].parent;
-        
-        calculateNodePositions(tree);
-        setTree({...tree});
-        await wait(speed / 2);
-        continue;
-      }
-      
-      // Case 3: Kardeş siyah, içteki çocuk kırmızı, dıştaki çocuk siyah
-      if (isLeftChild && siblingRightChildColor === 'black' && siblingLeftChildColor === 'red') {
-        setExplanationText('Case 3: Kardeş siyah, iç çocuk kırmızı, dış çocuk siyah. Kardeş etrafında rotasyon yapılıyor.');
-        await wait(speed);
-        
-        tree.nodes[siblingId].color = 'red';
-        if (siblingLeftChildId !== null) {
-          tree.nodes[siblingLeftChildId].color = 'black';
-        }
-        
-        await rightRotate(tree, siblingId);
-        
-        // Rotasyon sonrası kardeşi güncelle
-        siblingId = parent.right;
-        if (siblingId === null) break;
-        
-      } else if (!isLeftChild && siblingLeftChildColor === 'black' && siblingRightChildColor === 'red') {
-        setExplanationText('Case 3: Kardeş siyah, iç çocuk kırmızı, dış çocuk siyah. Kardeş etrafında rotasyon yapılıyor.');
-        await wait(speed);
-        
-        tree.nodes[siblingId].color = 'red';
-        if (siblingRightChildId !== null) {
-          tree.nodes[siblingRightChildId].color = 'black';
-        }
-        
-        await leftRotate(tree, siblingId);
-        
-        // Rotasyon sonrası kardeşi güncelle
-        siblingId = parent.left;
-        if (siblingId === null) break;
-      }
-      
-      // Case 4: Kardeş siyah, dıştaki çocuk kırmızı
-      setExplanationText('Case 4: Kardeş siyah, dıştaki çocuk kırmızı. Ebeveyn etrafında rotasyon yapılıyor.');
-      await wait(speed);
-      
-      const updatedSibling = tree.nodes[siblingId];
-      updatedSibling.color = parent.color;
-      parent.color = 'black';
-      
-      if (isLeftChild) {
-        if (updatedSibling.right !== null) {
-          tree.nodes[updatedSibling.right].color = 'black';
-        }
-        await leftRotate(tree, currentParentId);
-      } else {
-        if (updatedSibling.left !== null) {
-          tree.nodes[updatedSibling.left].color = 'black';
-        }
-        await rightRotate(tree, currentParentId);
-      }
-      
-      // İşlemi sonlandır
-      currentNodeId = tree.root;
-      break;
-    }
-    
-    // Kök düğümü siyah yap ve işlemi sonlandır
-    if (currentNodeId !== null) {
-      tree.nodes[currentNodeId].color = 'black';
-    }
-    
-    if (tree.root !== null) {
-      tree.nodes[tree.root].color = 'black';
-    }
-  };
-
-  // Renk düzeltmesi uygulayan ve en önemli kuralları doğrulayan fonksiyon
-  const ensureRedBlackProperties = (tree: RedBlackTree) => {
-    if (tree.root === null) return;
-    
-    // Kök her zaman siyah olmalı
-    if (tree.root !== null) {
-      tree.nodes[tree.root].color = 'black';
-    }
-    
-    // Her kırmızı düğümün çocukları siyah olmalı
-    for (let i = 0; i < tree.nodes.length; i++) {
-      const node = tree.nodes[i];
-      if (node.highlighted) continue; // Silinmiş düğümleri atla
-      
-      if (node.color === 'red') {
-        // Sol çocuk varsa ve kırmızıysa, siyaha dönüştür
-        if (node.left !== null && tree.nodes[node.left].color === 'red') {
-          tree.nodes[node.left].color = 'black';
-        }
-        
-        // Sağ çocuk varsa ve kırmızıysa, siyaha dönüştür
-        if (node.right !== null && tree.nodes[node.right].color === 'red') {
-          tree.nodes[node.right].color = 'black';
-        }
-      }
-    }
-    
-    // Siyah yüksekliği düzenle - tüm yolların siyah yüksekliği aynı olmalı
-    adjustBlackHeight(tree);
-  };
-
-  // Siyah yüksekliği düzenleme fonksiyonu - her yolda eşit sayıda siyah düğüm olmasını sağlar
-  const adjustBlackHeight = (tree: RedBlackTree) => {
-    if (tree.root === null) return;
-    
-    // Her düğümden yapraklara giden yollar için siyah düğüm sayısını hesapla
-    const paths: {nodeId: number, blackCount: number}[] = [];
-    
-    // Tüm yaprak yollarını ve siyah sayısını bul
-    const findLeafPaths = (nodeId: number | null, blackCount: number, path: number[]) => {
-      if (nodeId === null) return;
-      
-      const node = tree.nodes[nodeId];
-      if (node.highlighted) return; // Silinmiş düğümleri atla
-      
-      const newBlackCount = node.color === 'black' ? blackCount + 1 : blackCount;
-      const newPath = [...path, nodeId];
-      
-      // Yaprak düğüme ulaştık
-      if (node.left === null && node.right === null) {
-        paths.push({
-          nodeId: nodeId,
-          blackCount: newBlackCount
-        });
-        return;
-      }
-      
-      if (node.left !== null) findLeafPaths(node.left, newBlackCount, newPath);
-      if (node.right !== null) findLeafPaths(node.right, newBlackCount, newPath);
-    };
-    
-    findLeafPaths(tree.root, 0, []);
-    
-    // Hedef siyah sayısını belirle (en yüksek olan)
-    let maxBlackCount = 0;
-    for (const path of paths) {
-      maxBlackCount = Math.max(maxBlackCount, path.blackCount);
-    }
-    
-    // Siyah sayısı hedeften düşük olan yollarda renkleri ayarla
-    for (const path of paths) {
-      if (path.blackCount < maxBlackCount) {
-        // Yaprak düğümleri siyah yap
-        const node = tree.nodes[path.nodeId];
-        if (node.color === 'red') {
-          node.color = 'black';
-        }
-      }
+    // Red-Black özellikleri doğrulandı
+    const violations = validateRedBlackProperties(newTree);
+    if (violations.length > 0) {
+      console.log('Red-Black tree kuralları ihlal edildi:', violations);
+      setExplanationText(`Uyarı: ${violations[0]}`);
+    } else {
+      console.log('Red-Black tree kuralları doğrulandı.');
     }
   };
 
   // Ağaç düğümlerinin koordinatlarını hesapla
-  const calculateNodePositions = (currentTree: RedBlackTree) => {
+  const calculateNodePositions = (currentTree: RedBlackTree | AVLTree) => {
     if (currentTree.root === null) return;
+    
+    // Ağaç türünü kontrol et
+    const isAVL = 'height' in currentTree.nodes[0];
     
     // Ağacın derinliğini hesapla
     const getDepth = (nodeId: number | null): number => {
       if (nodeId === null) return 0;
+      
       const node = currentTree.nodes[nodeId];
       if (node.highlighted) return 0; // Silinmiş düğümleri atla
       
@@ -1052,9 +1068,6 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
     const depth = getDepth(currentTree.root);
     const svgWidth = 800;
     const svgHeight = depth * LEVEL_HEIGHT + 80;
-    
-    // Her seviyedeki düğüm sayısını bulmak için hazırlık
-    const nodeCounts: number[] = Array(depth).fill(0);
     
     // Düğüm pozisyonlarını hesapla
     const calculatePosition = (nodeId: number | null, level: number, leftX: number, rightX: number): void => {
@@ -1085,18 +1098,29 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
   }, []);
 
   // Ağaç özelliklerini açıkla ve görselleştir
-  const explainRedBlackTree = async () => {
+  const explainTree = async () => {
     if (processing) return;
     setProcessing(true);
     setCurrentStep(0);
     
+    if (isAVLTree) {
+      await explainAVLTree();
+    } else {
+      await explainRedBlackTree();
+    }
+    
+    setProcessing(false);
+  };
+
+  // AVL ağacı özelliklerini açıkla
+  const explainAVLTree = async () => {
     const steps = [
-      "Kırmızı-Siyah Ağaç, kendini dengeleyen ikili arama ağacıdır.",
-      "Her düğüm ya kırmızı ya da siyahtır.",
-      "Kök düğüm her zaman siyahtır.",
-      "Kırmızı bir düğümün tüm çocukları siyah olmalıdır.",
-      "Herhangi bir düğümden yaprak düğümlere kadar olan her yolda aynı sayıda siyah düğüm bulunur.",
-      "Bu özellikler sayesinde, ağaç her zaman dengeli kalır ve işlemler O(log n) zaman karmaşıklığına sahiptir."
+      "AVL Ağacı, kendini dengeleyen ikili arama ağacıdır.",
+      "Her düğümün sol ve sağ alt ağaçlarının yükseklikleri arasındaki fark en fazla 1'dir.",
+      "Balance Factor = Sol Alt Ağaç Yüksekliği - Sağ Alt Ağaç Yüksekliği",
+      "Balance Factor değeri -1, 0 veya 1 olmalıdır.",
+      "Dengesizlik durumunda rotasyonlar (LL, LR, RL, RR) yapılır.",
+      "Bu özellikler sayesinde ağaç her zaman dengeli kalır ve işlemler O(log n) zaman karmaşıklığına sahiptir."
     ];
     
     setTotalSteps(steps.length);
@@ -1106,8 +1130,122 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
       setExplanationText(steps[i]);
       await wait(speed * 2);
     }
+  };
+
+  // Red-Black ağaç özelliklerini açıkla
+  const explainRedBlackTree = async () => {
+    const steps = [
+      "Kırmızı-Siyah Ağaç, kendini dengeleyen ikili arama ağacıdır.",
+      "Kural 1: Her düğüm ya kırmızı ya da siyahtır.",
+      "Kural 2: Kök düğüm her zaman siyahtır.",
+      "Kural 3: Tüm yaprak (NIL) düğümler siyahtır.",
+      "Kural 4: Kırmızı bir düğümün tüm çocukları siyah olmalıdır.",
+      "Kural 5: Herhangi bir düğümden yaprak düğümlere kadar olan her yolda aynı sayıda siyah düğüm bulunur.",
+      "Bu kurallar sayesinde ağaç dengeli kalır ve işlemler O(log n) zaman karmaşıklığına sahiptir.",
+      "Ekleme ve silme sırasında rotasyonlar ve renk değişimleri ile kurallar korunur."
+    ];
     
+    setTotalSteps(steps.length);
+    
+    for (let i = 0; i < steps.length; i++) {
+      setCurrentStep(i + 1);
+      setExplanationText(steps[i]);
+      
+      // İlgili kuralları ağaçta vurgula
+      if (i === 1) { // Kural 1
+        setExplanationText("Kural 1: Her düğüm ya kırmızı ya da siyahtır. Ağaçtaki düğümlerin renklerini inceleyin.");
+      } else if (i === 2) { // Kural 2
+        const currentTree = tree as RedBlackTree;
+        if (currentTree.root !== null) {
+          const rootNode = currentTree.nodes[currentTree.root];
+          setExplanationText(`Kural 2: Kök düğüm (${rootNode.value}) her zaman siyahtır.`);
+        }
+      } else if (i === 4) { // Kural 4
+        setExplanationText("Kural 4: Kırmızı düğümlerin çocukları siyah olmalıdır. Kırmızı düğümleri ve çocuklarını kontrol edin.");
+      } else if (i === 5) { // Kural 5
+        setExplanationText("Kural 5: Her yolda aynı sayıda siyah düğüm olmalıdır. Bu 'siyah yükseklik' dengelenmesini sağlar.");
+      }
+      
+      await wait(speed * 2);
+    }
+  };
+
+  // Düğüm silme - algoritma tipine göre uygun fonksiyonu çağır
+  const deleteNode = async () => {
+    if (processing || !operationValue) return;
+    setProcessing(true);
+    
+    const value = parseInt(operationValue);
+    if (isNaN(value)) {
+      setExplanationText('Lütfen geçerli bir sayı girin.');
+      setProcessing(false);
+      return;
+    }
+    
+    if (isAVLTree) {
+      await deleteAVLNodeWithAnimation(value);
+    } else {
+      await deleteRedBlackNodeWithAnimation(value);
+    }
+    
+    setOperationValue('');
     setProcessing(false);
+  };
+
+  // AVL düğüm silme (basit implementasyon)
+  const deleteAVLNodeWithAnimation = async (value: number) => {
+    setExplanationText(`AVL Ağacından ${value} değeri siliniyor...`);
+    await wait(speed);
+    
+    const avlTree = tree as AVLTree;
+    const newTree = JSON.parse(JSON.stringify(avlTree)) as AVLTree;
+    
+    // Silinecek düğümü bul
+    const nodeToDelete = newTree.nodes.find(node => node.value === value && !node.highlighted);
+    if (!nodeToDelete) {
+      setExplanationText(`${value} değeri ağaçta bulunamadı.`);
+      return;
+    }
+    
+    // Basit silme - düğümü highlight olarak işaretle
+    nodeToDelete.highlighted = true;
+    
+    setTree(newTree);
+    calculateNodePositions(newTree);
+    setExplanationText(`${value} değeri silindi.`);
+  };
+
+  // Red-Black düğüm silme (mevcut implementasyon)
+  const deleteRedBlackNodeWithAnimation = async (value: number) => {
+    setExplanationText(`Red-Black Tree'den ${value} değeri siliniyor...`);
+    await wait(speed);
+    
+    const rbTree = tree as RedBlackTree;
+    const newTree = JSON.parse(JSON.stringify(rbTree)) as RedBlackTree;
+    
+    // Silme öncesi durumu göster
+    setExplanationText(`${value} değeri ağaçta aranıyor...`);
+    await wait(speed);
+    
+    // Red-Black Tree silme algoritması
+    const deleted = deleteRedBlackNode(newTree, value);
+    
+    if (deleted) {
+      setTree(newTree);
+      calculateNodePositions(newTree);
+      setExplanationText(`${value} değeri başarıyla silindi ve Red-Black Tree kuralları korundu.`);
+      
+      // Red-Black özellikleri doğrulandı
+      const violations = validateRedBlackProperties(newTree);
+      if (violations.length > 0) {
+        console.log('Red-Black tree kuralları ihlal edildi:', violations);
+        setExplanationText(`Uyarı: ${violations[0]}`);
+      } else {
+        console.log('Red-Black tree kuralları doğrulandı.');
+      }
+    } else {
+      setExplanationText(`${value} değeri ağaçta bulunamadı.`);
+    }
   };
 
   return (
@@ -1125,7 +1263,7 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
         
         <button 
           className="control-button primary"
-          onClick={explainRedBlackTree}
+          onClick={explainTree}
           disabled={processing}
         >
           Özellikleri Göster
@@ -1240,13 +1378,29 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
           {tree.nodes.map((node) => {
             if (node.highlighted) return null; // Silinmiş düğümleri atla
             
+            // Ağaç tipine göre renk belirleme
+            let nodeColor = AVL_NODE_COLOR; // Default AVL rengi
+            if (isAVLTree) {
+              // AVL ağacı için renk mantığı
+              const avlNode = node as AVLTreeNode;
+              if (Math.abs(avlNode.balanceFactor) > 1) {
+                nodeColor = AVL_UNBALANCED_COLOR;
+              } else {
+                nodeColor = AVL_BALANCED_COLOR;
+              }
+            } else {
+              // Red-Black ağaç için renk mantığı
+              const rbNode = node as TreeNode;
+              nodeColor = rbNode.color === 'red' ? RED_COLOR : BLACK_COLOR;
+            }
+            
             return (
               <g key={`node-${node.id}`}>
                 <circle
                   cx={node.x}
                   cy={node.y}
                   r={NODE_RADIUS}
-                  fill={node.color === 'red' ? RED_COLOR : BLACK_COLOR}
+                  fill={nodeColor}
                   stroke="#fff"
                   strokeWidth={2}
                 />
@@ -1261,6 +1415,20 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
                 >
                   {node.value}
                 </text>
+                {/* AVL ağacı için balance factor göster */}
+                {isAVLTree && (
+                  <text
+                    x={node.x! + NODE_RADIUS + 5}
+                    y={node.y! - NODE_RADIUS - 5}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="#333"
+                    fontSize="10"
+                    fontWeight="bold"
+                  >
+                    BF: {(node as AVLTreeNode).balanceFactor}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -1269,6 +1437,19 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
       
       <div className="info-section">
         <div className="tree-legend">
+          {isAVLTree ? (
+            <>
+              <div className="legend-item">
+                <div className="legend-color" style={{ backgroundColor: AVL_BALANCED_COLOR }}></div>
+                <span>Dengeli Düğüm</span>
+              </div>
+              <div className="legend-item">
+                <div className="legend-color" style={{ backgroundColor: AVL_UNBALANCED_COLOR }}></div>
+                <span>Dengesiz Düğüm</span>
+              </div>
+            </>
+          ) : (
+            <>
           <div className="legend-item">
             <div className="legend-color" style={{ backgroundColor: RED_COLOR }}></div>
             <span>Kırmızı Düğüm</span>
@@ -1277,9 +1458,11 @@ const TreeVisualization: React.FC<TreeVisualizationProps> = ({
             <div className="legend-color" style={{ backgroundColor: BLACK_COLOR }}></div>
             <span>Siyah Düğüm</span>
           </div>
+            </>
+          )}
         </div>
         
-        <AlgorithmInfoCard algorithmType="Red-Black Tree" />
+        <AlgorithmInfoCard algorithmType={isAVLTree ? "avl tree" : "red-black tree"} />
       </div>
     </div>
   );
